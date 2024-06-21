@@ -19,10 +19,10 @@
 
 |   Info      |        Description     |
 | ----------- | ---------------------- |
-|  Title      |       ProjectTitle     |
-| System URL  |      link_to_system    |
-| Video Link  |      link_to_video     |
+| Title       | ValoFoDummies.gg       |
+| System URL  | link_to_system         |
+| Video Link  | link_to_video          |
 
 ## Project Summary
 
-This is a summary of the project!
+We aim to build a web app to help players improve by providing players easily accessible information and recommendations. We plan to do this by making stats more understandable through visual formats, and also analyzing those stats to understand play habits. Using a combination of individual player stats and meta trends, the web app wilI give recommendations for things such as certain areas to focus on, or agents to play. Utilizing LLMs, the web app will be capable of giving advice for a particular match. It is also a fun site that allows users to draw comparisons between themselves and their favorite pros. They can also create an account to track their progress over time.
