@@ -1,0 +1,24 @@
+name: Check PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: eifinger/setup-rye@v4
+        with:
+          enable-cache: true
+          working-directory: backend
+      - name: rye sync
+        working-directory: backend
+        run: rye sync
+      - name: rye lint
+        working-directory: backend
+        run: rye lint -- --output-format=github
+      - name: rye test
+        working-directory: backend
+        run: rye test
