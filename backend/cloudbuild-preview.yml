@@ -20,7 +20,7 @@ steps:
         "build",
         "-t",
         "us-central1-docker.pkg.dev/$PROJECT_ID/containers/${_SERVICE_NAME}:${_PR_NUMBER}-${SHORT_SHA}",
-        ".",
+        "backend",
       ]
 
   - id: "push image"
