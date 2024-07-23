@@ -55,7 +55,7 @@ steps:
       ]
 
   - id: "link revision on pull request"
-    name: "us-central1-docker.pkg.dev/$PROJECT_ID/containers/deployment-previews" # our custom builder
+    name: "us-central1-docker.pkg.dev/$PROJECT_ID/containers/${_SERVICE_NAME}"
     secretEnv: ["GITHUB_TOKEN"]
     args:
       [
