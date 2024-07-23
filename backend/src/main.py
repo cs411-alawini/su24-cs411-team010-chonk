@@ -6,6 +6,8 @@ from fastapi import FastAPI, Request
 from database import engine
 from sqlalchemy import text
 
+from models import Map
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -31,5 +33,6 @@ async def read_item(item_id: int, q: Union[str, None] = None):
 def get_maps(request: Request):
     query = text("SELECT * FROM Maps")
     result = request.app.state.db.execute(query)
-    maps = result.fetchall()
-    return {"maps": maps}
+    map_data = result.fetchall()
+    maps = [Map(map_id=map_id, name=map_name) for map_id, map_name in map_data]
+    return maps
