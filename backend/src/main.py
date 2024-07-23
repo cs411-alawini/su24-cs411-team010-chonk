@@ -1,12 +1,10 @@
 from contextlib import asynccontextmanager
 from typing import Union
 
-from fastapi import FastAPI, Request
-
 from database import engine
-from sqlalchemy import text
-
+from fastapi import FastAPI, Request
 from models import Map
+from sqlalchemy import text
 
 
 @asynccontextmanager

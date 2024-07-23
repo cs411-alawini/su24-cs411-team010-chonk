@@ -1,8 +1,7 @@
-from sqlalchemy import create_engine
-from config import settings
+from config import get_settings
+from sqlalchemy import URL, create_engine
 
-
-from sqlalchemy import URL
+settings = get_settings()
 
 if settings.database_username is None:
     raise ValueError("database_username is required")
