@@ -134,3 +134,21 @@ async def player_stats(
         "avgHeadShotRatio": player_stats_data.avgHeadShotRatio,
         "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
     }
+
+#make kd tree work, assiugn agents to numbers...corresponding to roles in game maybe
+
+# @app.get("/recommend_agent")
+# def get_agent(request: Request):
+#     curr_map = request.args['map']
+
+# agentnums {"Jett":1, "Reyna":2, "Raze":3, "Yoru":4, "Neon":5, "Sova", "KAY/O", "Fade", "Gekko" }
+#select distinct p1.player_id from player_stats where 
+@app.get("/pro_lookalike")
+def get_pro_lookalike(request: Request,current_user: Annotated[User, Depends(get_current_user)],):
+    query = text("SELECT player_id, agent_id,rating,average_combat_score,kills,deaths,assists,kills_deaths,kill_assist_trade_survive_ratio,average_damage_per_round,headshot_ratio,first_kills,first_deaths FROM Player_Stats where tier_id = 21")
+    pros = list(request.app.state.db.execute(query))
+    pro_tree = sp.spatial.KDTree([x[2:] for x in pros])
+    user_stats = [1,1,1,1,1,1,1,1,1,1,1]
+    _, best_match  = pro_tree.query(user_stats,k=1)
+    return {"best_match" : f'{pros[best_match][0]}'}
+    #return pros[best_match]
