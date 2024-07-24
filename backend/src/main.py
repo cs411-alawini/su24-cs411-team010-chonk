@@ -10,6 +10,7 @@ from auth import (
     create_access_token,
     get_user,
 )
+import scipy as sp
 from config import get_settings
 from database import engine
 from fastapi import Depends, FastAPI, HTTPException, Request, status
