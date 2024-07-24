@@ -41,10 +41,16 @@ def get_user(db, username: str):
 
 
 def register_user(db, username: str, password: str):
-    statement = text(
-        "insert into Player (player_id, current_tier_id) values (:player_id, :current_tier_id)"
-    ).bindparams(player_id=username, current_tier_id=3)
-    db.execute(statement)
+    statement = text("select * from Player where player_id=:player_id").bindparams(
+        player_id=username
+    )
+    player_data = db.execute(statement).fetchone()
+
+    if not player_data:
+        statement = text(
+            "insert into Player (player_id, current_tier_id) values (:player_id, :current_tier_id)"
+        ).bindparams(player_id=username, current_tier_id=3)
+        db.execute(statement)
 
     statement = text(
         "insert into User (username, player_id, password_hash) values (:username, :player_id, :password_hash)"

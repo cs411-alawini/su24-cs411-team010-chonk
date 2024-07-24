@@ -113,3 +113,24 @@ async def read_users_me(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     return current_user
+
+
+@app.get("/player-stats")
+async def player_stats(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT AVG(kills) as avgKillsPerGame, AVG(deaths) as avgDeathsPerGame, AVG(assists) as avgAssistsPerGame, AVG(average_combat_score) as avgCombatScorePerGame, AVG(headshot_ratio) as avgHeadShotRatio, AVG(first_kills) as avgFirstBloodsPerGame FROM Player_Stats where player_id=:player_id group by player_id"
+    ).bindparams(player_id=player_id)
+    result = request.app.state.db.execute(query)
+    player_stats_data = result.fetchone()
+    return {
+        "avgKillsPerGame": player_stats_data.avgKillsPerGame,
+        "avgDeathsPerGame": player_stats_data.avgDeathsPerGame,
+        "avgAssistsPerGame": player_stats_data.avgAssistsPerGame,
+        "avgCombatScorePerGame": player_stats_data.avgCombatScorePerGame,
+        "avgHeadShotRatio": player_stats_data.avgHeadShotRatio,
+        "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
+    }
