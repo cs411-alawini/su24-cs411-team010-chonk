@@ -14,7 +14,7 @@ from database import engine
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from models import Map, Token, TokenData, User
+from models import LoginRequest, Map, Token, TokenData, User
 from sqlalchemy import text
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -90,10 +90,10 @@ def get_maps(request: Request):
 async def login_for_access_token(
     request: Request,
     settings: Annotated[config.Settings, Depends(get_settings)],
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    login_request: LoginRequest,
 ) -> Token:
     user = authenticate_user(
-        request.app.state.db, form_data.username, form_data.password
+        request.app.state.db, login_request.username, login_request.password
     )
     if not user:
         raise HTTPException(

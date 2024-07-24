@@ -6,6 +6,11 @@ class Map(BaseModel):
     name: str
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
 class User(BaseModel):
     user_id: int
     username: str
