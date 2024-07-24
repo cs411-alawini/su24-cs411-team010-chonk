@@ -15,15 +15,13 @@ anyio==4.4.0
     # via httpx
     # via starlette
     # via watchfiles
+bcrypt==4.2.0
+    # via passlib
 certifi==2024.7.4
     # via httpcore
     # via httpx
 click==8.1.7
     # via typer
-    # via uvicorn
-colorama==0.4.6
-    # via click
-    # via pytest
     # via uvicorn
 dnspython==2.6.1
     # via email-validator
@@ -32,8 +30,6 @@ email-validator==2.2.0
 fastapi==0.111.1
 fastapi-cli==0.0.4
     # via fastapi
-greenlet==3.0.3
-    # via sqlalchemy
 h11==0.14.0
     # via httpcore
     # via uvicorn
@@ -59,6 +55,7 @@ mdurl==0.1.2
     # via markdown-it-py
 packaging==24.1
     # via pytest
+passlib==1.7.4
 pluggy==1.5.0
     # via pytest
 pydantic==2.8.2
@@ -69,6 +66,7 @@ pydantic-core==2.20.1
 pydantic-settings==2.3.4
 pygments==2.18.0
     # via rich
+pyjwt==2.8.0
 pymysql==1.1.1
 pytest==8.3.1
 python-dotenv==1.0.1
@@ -99,6 +97,8 @@ typing-extensions==4.12.2
     # via typer
 uvicorn==0.30.3
     # via fastapi
+uvloop==0.19.0
+    # via uvicorn
 watchfiles==0.22.0
     # via uvicorn
 websockets==12.0

@@ -49,7 +49,7 @@ steps:
         "--port",
         "80",
         "--update-secrets",
-        "DATABASE_HOST=database-host:latest,DATABASE_PASSWORD=database-password:latest",
+        "DATABASE_HOST=database-host:latest,DATABASE_PASSWORD=database-password:latest,SECRET_KEY=secret-key:latest",
       ]
 
   # Force the new revision to serve 100% of traffic.
