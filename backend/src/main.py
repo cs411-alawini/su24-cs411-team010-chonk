@@ -159,7 +159,7 @@ def most_played_agent(
     return {"most_played_agent": f"{agent}"}
 
 @app.get("/most_played_map")
-def most_played_agent(
+def most_played_map(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -170,7 +170,7 @@ def most_played_agent(
     result = request.app.state.db.execute(query)
     most_played_map = result.fetchone()
     map = most_played_map.map
-    return {"most_played_agent": f"{map}"}
+    return {"most_played_map": f"{map}"}
 
 
 @app.get("/pro_lookalike")
