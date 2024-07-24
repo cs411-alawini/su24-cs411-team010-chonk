@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChakraProvider, Box, Heading, Input, Button, VStack } from '@chakra-ui/react';
 import styles from './App.module.css';
+import config from './config';
 
 function App() {
     // State variables for username and password
@@ -20,7 +21,7 @@ function App() {
         try {
             // simple JSON format
             // /login request
-            const response = await fetch('https://chonk-api.meow.cx/', {
+            const response = await fetch(config.apiUrl + 'login', {
                 method: 'POST',
                 headers: {
                 'Content-Type': 'application/json',
