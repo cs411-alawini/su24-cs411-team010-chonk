@@ -158,6 +158,20 @@ def most_played_agent(
     agent = most_played_user.agent
     return {"most_played_agent": f"{agent}"}
 
+@app.get("/most_played_map")
+def most_played_agent(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT map_name as map FROM Player_Stats p JOIN Game g ON p.game_id = g.game_id JOIN Maps m ON g.map_id = m.map_id WHERE player_id=:player_id GROUP BY m.map_id ORDER BY COUNT(m.map_id) DESC LIMIT 1"
+    ).bindparams(player_id=player_id)
+    result = request.app.state.db.execute(query)
+    most_played_map = result.fetchone()
+    map = most_played_map.map
+    return {"most_played_agent": f"{map}"}
+
 
 @app.get("/pro_lookalike")
 def get_pro_lookalike(
