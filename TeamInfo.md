@@ -14,6 +14,8 @@
 | Member2     | kpng2@illinois.edu     |
 | Member3     | Andrew Loh             |
 | Member3     | acloh2@illinois.edu    |
+| Member3     | Bowen Cui              |
+| Member3     | tianyuc3@illinois.edu  |
 
 ## Project Information
 
