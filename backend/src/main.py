@@ -9,6 +9,7 @@ from auth import (
     create_access_token,
     get_user,
 )
+import scipy as sp
 from config import get_settings
 from database import engine
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -141,14 +142,31 @@ async def player_stats(
 # def get_agent(request: Request):
 #     curr_map = request.args['map']
 
-# agentnums {"Jett":1, "Reyna":2, "Raze":3, "Yoru":4, "Neon":5, "Sova", "KAY/O", "Fade", "Gekko" }
-#select distinct p1.player_id from player_stats where 
+@app.get("/most_played_agent")
+def most_played_agent(request: Request,current_user: Annotated[User, Depends(get_current_user)],):
+    player_id = current_user.player_id
+    query=  text("select agent_name as agent from Player_Stats p left join Agents a on p.agent_id = a.agent_id where player_id=:player_id group by p.agent_id order by count(p.agent_id) desc limit 1").bindparams(player_id=player_id)
+    result = request.app.state.db.execute(query)
+    most_played_user = result.fetchone()
+    agent = most_played_user.agent
+    return {"most_played_agent" : f'{agent}'}
+
+
 @app.get("/pro_lookalike")
 def get_pro_lookalike(request: Request,current_user: Annotated[User, Depends(get_current_user)],):
-    query = text("SELECT player_id, agent_id,rating,average_combat_score,kills,deaths,assists,kills_deaths,kill_assist_trade_survive_ratio,average_damage_per_round,headshot_ratio,first_kills,first_deaths FROM Player_Stats where tier_id = 21")
-    pros = list(request.app.state.db.execute(query))
-    pro_tree = sp.spatial.KDTree([x[2:] for x in pros])
-    user_stats = [1,1,1,1,1,1,1,1,1,1,1]
+    player_id = current_user.player_id
+    
+    query=  text("select agent_id as agent from Player_Stats where player_id=:player_id group by agent_id order by count(agent_id) desc limit 1").bindparams(player_id=player_id)
+    result = request.app.state.db.execute(query)
+    most_played_user = result.fetchone()
+    agent = most_played_user.agent
+    pro_query = text("SELECT player_id, avg(average_combat_score), avg(deaths),avg(assists),avg(kills_deaths) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where agent_id=:agent and tier_id = 21 group by player_id  order by count(agent_id) desc limit 100").bindparams(agent=agent)
+    pros = list(request.app.state.db.execute(pro_query))
+    pro_tree = sp.spatial.KDTree([x[1:] for x in pros])
+    query = text(
+        "SELECT avg(average_combat_score), avg(deaths),avg(assists),avg(kills_deaths) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where player_id=:player_id group by player_id"
+    ).bindparams(player_id=player_id)
+    user_stats = list(request.app.state.db.execute(query))
     _, best_match  = pro_tree.query(user_stats,k=1)
-    return {"best_match" : f'{pros[best_match][0]}'}
-    #return pros[best_match]
+    return {"best_match" : f'{pros[best_match[0]][0]}'}
+
