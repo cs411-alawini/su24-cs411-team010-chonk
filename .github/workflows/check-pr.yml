@@ -16,9 +16,12 @@ jobs:
       - name: rye sync
         working-directory: backend
         run: rye sync
-      - name: rye lint
+      - name: ruff check
         working-directory: backend
-        run: rye lint -- --output-format=github
+        run: rye run ruff check --select I --output-format=github
+      - name: ruff format
+        working-directory: backend
+        run: rye run ruff format
       - name: rye test
         working-directory: backend
         run: rye test
