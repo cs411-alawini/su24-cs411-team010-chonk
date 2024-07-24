@@ -42,7 +42,7 @@ def get_user(db, username: str):
 
 def register_user(db, username: str, password: str):
     statement = text(
-        "insert into Player(player_id, current_tier_id) values (:player_id, :current_tier_id)"
+        "insert into Player (player_id, current_tier_id) values (:player_id, :current_tier_id)"
     ).bindparams(player_id=username, current_tier_id=3)
     db.execute(statement)
 
@@ -54,8 +54,7 @@ def register_user(db, username: str, password: str):
         password_hash=get_password_hash(password),
     )
     db.execute(statement)
-
-    return get_user(db, username)
+    db.commit()
 
 
 def authenticate_user(db, username: str, password: str):
