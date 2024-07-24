@@ -1,11 +1,23 @@
 # rye run fastapi dev src/backend/main.py
+from contextlib import asynccontextmanager
 from typing import Union
 
-from fastapi import FastAPI, HTTPException
+from database import engine
+from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from models import Map
+from sqlalchemy import text
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.db = engine.connect()
+    yield
+    engine.dispose()
+
+
+app = FastAPI(lifespan=lifespan)
 
 # Pydantic model for the login request body
 class LoginRequest(BaseModel):
@@ -28,6 +40,14 @@ async def read_root():
 @app.get("/items/{item_id}")
 async def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
+
+@app.get("/maps")
+def get_maps(request: Request):
+    query = text("SELECT * FROM Maps")
+    result = request.app.state.db.execute(query)
+    map_data = result.fetchall()
+    maps = [Map(map_id=map_id, name=map_name) for map_id, map_name in map_data]
+    return maps
 
 # new POST endpoint for login
 @app.post("/login")
