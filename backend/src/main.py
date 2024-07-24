@@ -1,4 +1,4 @@
-# rye run fastapi dev src/backend/main.py
+# rye run fastapi dev src/main.py
 from contextlib import asynccontextmanager
 from typing import Union
 
@@ -8,7 +8,6 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from models import Map
 from sqlalchemy import text
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
