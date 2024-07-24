@@ -1,12 +1,19 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import { ChakraProvider } from '@chakra-ui/react'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { ChakraProvider } from '@chakra-ui/react';
+import App from './App';
+import OwnStats from './OwnStats';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ChakraProvider>
-        <App />
+      <Router>
+        <Routes>
+          <Route path="/login" element={<App />} />
+          <Route path="/own-stats" element={<OwnStats />} />
+        </Routes>
+      </Router>
     </ChakraProvider>
   </React.StrictMode>
 );
