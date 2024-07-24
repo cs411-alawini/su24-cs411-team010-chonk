@@ -1,35 +1,79 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { ChakraProvider, Box, Heading, Input, Button, VStack } from '@chakra-ui/react';
+import styles from './App.module.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+    // State variables for username and password
+    // index 0: variable name
+    // index 1: function name to update the variable
+    // useState('') initialises state and sets default value to ''
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
 
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    // function to handle login action
+    const handleLogin = async () => {
+        // debug logs
+        console.log('Username:', username);
+        console.log('Password:', password);
+
+        // testing sending JSON to backend RYE python
+        try {
+            // simple JSON format
+            // /login request
+            const response = await fetch('https://chonk-api.meow.cx/', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password }),
+            });
+        
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Handle successful login
+                console.log('Login successful:', data);
+            } else {
+                // Handle failed login
+                console.error('Login failed:', data.message);
+            }
+        } catch (error) {
+            console.error('Error during login:', error);
+        }
+    };
+
+    return (
+        // provider for ChakraUI
+        <ChakraProvider>
+            {/* centering */}
+            <Box className={styles.container}>
+                {/* Outer box to contain login forms */}
+                <Box className={styles.box}>
+                    {/* Vertically stack elements */}
+                    <VStack spacing={4}>
+                        <Heading as="h1" size="xl" mb={6}>Login</Heading>
+                        {/* Username and Password inputs */}
+                        <Input
+                            placeholder="Username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className={styles.input}
+                        />
+                        <Input
+                            placeholder="Password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className={styles.input}
+                        />
+
+                        {/* Login Button, runs handleLogin on click */}
+                        <Button colorScheme="teal" onClick={handleLogin}>Login</Button>
+                    </VStack>
+                </Box>
+            </Box>
+        </ChakraProvider>
+    );
 }
 
-export default App
+export default App;
