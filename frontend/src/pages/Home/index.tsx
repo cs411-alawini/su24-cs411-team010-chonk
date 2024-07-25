@@ -299,7 +299,7 @@ const Home = (): React.ReactElement => {
                 </Tr>
               </Thead>
               <Tbody>
-                {statsData?.top_agents.map((agent: any, idx: Number) => (
+                {statsData?.top_agents.map((agent: any, idx: number) => (
                   <Tr>
                     <Td>{idx + 1}</Td>
                     <Td>{agent.agent_name}</Td>
