@@ -118,31 +118,71 @@ async def read_users_me(
 
 @app.get("/player-stats")
 async def player_stats(
-    request: Request,
-    current_user: Annotated[User, Depends(get_current_user)],
-):
-    player_id = current_user.player_id
-    query = text(
-        "SELECT AVG(kills) as avgKillsPerGame, AVG(deaths) as avgDeathsPerGame, AVG(assists) as avgAssistsPerGame, AVG(average_combat_score) as avgCombatScorePerGame, AVG(headshot_ratio) as avgHeadShotRatio, AVG(first_kills) as avgFirstBloodsPerGame FROM Player_Stats where player_id=:player_id group by player_id"
-    ).bindparams(player_id=player_id)
-    result = request.app.state.db.execute(query)
-    player_stats_data = result.fetchone()
-    return {
-        "avgKillsPerGame": player_stats_data.avgKillsPerGame,
-        "avgDeathsPerGame": player_stats_data.avgDeathsPerGame,
-        "avgAssistsPerGame": player_stats_data.avgAssistsPerGame,
-        "avgCombatScorePerGame": player_stats_data.avgCombatScorePerGame,
-        "avgHeadShotRatio": player_stats_data.avgHeadShotRatio,
-        "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
+        request: Request,
+        current_user: Annotated[User, Depends(get_current_user)],
+    ):
+        player_id = current_user.player_id
+        query = text(
+            "SELECT AVG(kills) as avgKillsPerGame, AVG(deaths) as avgDeathsPerGame, AVG(assists) as avgAssistsPerGame, AVG(average_combat_score) as avgCombatScorePerGame, AVG(headshot_ratio) as avgHeadShotRatio, AVG(first_kills) as avgFirstBloodsPerGame FROM Player_Stats where player_id=:player_id group by player_id"
+        ).bindparams(player_id=player_id)
+        result = request.app.state.db.execute(query)
+        player_stats_data = result.fetchone()
+        return {
+            "avgKillsPerGame": player_stats_data.avgKillsPerGame,
+            "avgDeathsPerGame": player_stats_data.avgDeathsPerGame,
+            "avgAssistsPerGame": player_stats_data.avgAssistsPerGame,
+            "avgCombatScorePerGame": player_stats_data.avgCombatScorePerGame,
+            "avgHeadShotRatio": player_stats_data.avgHeadShotRatio,
+            "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
+        }
+
+@app.get("/update_user_data")
+async def update_user_data():
+    playertag = ""
+    playerign = ""
+    puuid = ""
+    CREDS = "username", "password"
+
+    auth = riot_auth.RiotAuth()
+    asyncio.run(auth.authorize(*CREDS))
+
+    asyncio.run(auth.reauthorize())
+
+
+    shard = "na"
+    puuid = "86e9115c-62f3-5bb8-be55-90aa5f38ccc6"
+    client_platform = "ew0KCSJwbGF0Zm9ybVR5cGUiOiAiUEMiLA0KCSJwbGF0Zm9ybU9TIjogIldpbmRvd3MiLA0KCSJwbGF0Zm9ybU9TVmVyc2lvbiI6ICIxMC4wLjE5MDQyLjEuMjU2LjY0Yml0IiwNCgkicGxhdGZvcm1DaGlwc2V0IjogIlVua25vd24iDQp9"
+    client_version = "release-09.01-shipping-21-2669223"
+
+    headers = {
+        "X-Riot-ClientPlatform": client_platform,
+        "X-Riot-ClientVersion": client_version,
+        "Authorization": f"Bearer {auth.access_token}",
+        "X-Riot-Entitlements-JWT": auth.entitlements_token,
     }
 
+    r = requests.get(
+        f"https://pd.{shard}.a.pvp.net/match-history/v1/history/{puuid}?queue=competitive",
+        headers=headers,
+    )
 
-# make kd tree work, assiugn agents to numbers...corresponding to roles in game maybe
+    # print(r.json())
 
-# @app.get("/recommend_agent")
-# def get_agent(request: Request):
-#     curr_map = request.args['map']
+    for match in r.json()["History"]:
+        match_id = match["MatchID"]
+        r = requests.get(
+            f"https://pd.{shard}.a.pvp.net/match-details/v1/matches/{match_id}",
+            headers=headers,
+        )
+        matchdata = r.json()
 
+    matches_to_add = []
+    
+    for player in matchdata['player']:
+        if player['tagLine'] == playertag and player['gameName'] == playerign:
+
+    
+    
 
 @app.get("/most_played_agent")
 def most_played_agent(
