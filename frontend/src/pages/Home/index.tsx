@@ -172,11 +172,11 @@ const Home = (): React.ReactElement => {
                   </Text>
                 ) : null}
                 <Box paddingTop={2}>
-                  <Button minWidth={"20vw"} bgColor="#FF4655">
-                    <ChakraLink as={ReactRouterLink} to="/own-stats">
+                  <ChakraLink as={ReactRouterLink} to="/own-stats">
+                    <Button minWidth={"20vw"} bgColor="#FF4655">
                       View stats
-                    </ChakraLink>
-                  </Button>
+                    </Button>
+                  </ChakraLink>
                 </Box>
               </Skeleton>
             ) : (
