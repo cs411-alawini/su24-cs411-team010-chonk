@@ -67,10 +67,18 @@ const Home = (): React.ReactElement => {
     data: profileData,
   } = useQuery({
     queryKey: ["profileData"],
-    queryFn: () =>
-      fetch(config.apiUrl + "/users/me", {
+    queryFn: async () => {
+      const response = await fetch(config.apiUrl + "/users/me", {
         headers: { Authorization: "Bearer " + localStorage.token },
-      }).then((res) => res.json()),
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        setLoggedIn(false);
+      }
+
+      return response.json();
+    },
     enabled: !!loggedIn,
   });
 
