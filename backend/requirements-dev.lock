@@ -41,14 +41,11 @@ email-validator==2.2.0
 fastapi==0.111.1
 fastapi-cli==0.0.4
     # via fastapi
-<<<<<<< HEAD
-greenlet==3.0.3
-    # via sqlalchemy
-=======
 frozenlist==1.4.1
     # via aiohttp
     # via aiosignal
->>>>>>> ec9a407eb4fba8f236cecd35bbac31055ada30b3
+greenlet==3.0.3
+    # via sqlalchemy
 h11==0.14.0
     # via httpcore
     # via uvicorn
@@ -74,14 +71,11 @@ markupsafe==2.1.5
     # via jinja2
 mdurl==0.1.2
     # via markdown-it-py
-<<<<<<< HEAD
-=======
 msgspec==0.18.6
     # via valo-api
 multidict==6.0.5
     # via aiohttp
     # via yarl
->>>>>>> ec9a407eb4fba8f236cecd35bbac31055ada30b3
 numpy==2.0.1
     # via scipy
 packaging==24.1

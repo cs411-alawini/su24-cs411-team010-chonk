@@ -5,6 +5,7 @@ from typing import Annotated, Union
 import config
 import jwt
 import scipy as sp
+import valo_api
 from auth import (
     authenticate_user,
     create_access_token,
@@ -16,7 +17,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from models import Map, Token, TokenData, User
-from sqlalchemy import text
+from sqlalchemy import text, insert
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -137,56 +138,57 @@ async def player_stats(
         }
 
 @app.get("/update_user_data")
-async def update_user_data():
-    playertag = ""
-    playerign = ""
-    puuid = ""
-    CREDS = "username", "password"
+async def update_user_data(request: Request, current_user: Annotated[User, Depends(get_current_user)],):
+    playertag = "0404"
+    playerign = "meow"
+    player_id = current_user.player_id
 
-    auth = riot_auth.RiotAuth()
-    asyncio.run(auth.authorize(*CREDS))
+    settings = get_settings()
+    if settings.henrik_api_key is None:
+        raise ValueError("henrik_api_key is required")
+    
 
-    asyncio.run(auth.reauthorize())
-
-
-    shard = "na"
-    puuid = "86e9115c-62f3-5bb8-be55-90aa5f38ccc6"
-    client_platform = "ew0KCSJwbGF0Zm9ybVR5cGUiOiAiUEMiLA0KCSJwbGF0Zm9ybU9TIjogIldpbmRvd3MiLA0KCSJwbGF0Zm9ybU9TVmVyc2lvbiI6ICIxMC4wLjE5MDQyLjEuMjU2LjY0Yml0IiwNCgkicGxhdGZvcm1DaGlwc2V0IjogIlVua25vd24iDQp9"
-    client_version = "release-09.01-shipping-21-2669223"
-
-    headers = {
-        "X-Riot-ClientPlatform": client_platform,
-        "X-Riot-ClientVersion": client_version,
-        "Authorization": f"Bearer {auth.access_token}",
-        "X-Riot-Entitlements-JWT": auth.entitlements_token,
-    }
-
-    r = requests.get(
-        f"https://pd.{shard}.a.pvp.net/match-history/v1/history/{puuid}?queue=competitive",
-        headers=headers,
+    valo_api.set_api_key(settings.henrik_api_key.get_secret_value())
+    matches = await valo_api.get_match_history_by_name_v3_async(  # type: ignore
+    "na", playerign, playertag, game_mode="competitive"
     )
 
-    # print(r.json())
 
-    for match in r.json()["History"]:
-        match_id = match["MatchID"]
-        r = requests.get(
-            f"https://pd.{shard}.a.pvp.net/match-details/v1/matches/{match_id}",
-            headers=headers,
-        )
-        matchdata = r.json()
+    for match in matches:
+        #match = matchdict.to_dict()
+        metadata = match.metadata
+        winteam = "Blue"
+        if match.teams.red.has_won:
+            winteam = "Red"
+        print(metadata.map, metadata.game_start, metadata.matchid)
 
-    matches_to_add = []
-    
-    for player in matchdata['player']:
-        if player['tagLine'] == playertag and player['gameName'] == playerign:
-            print("lol")
+        # stmst = (insert("Games") . values(map_id = (metadata.map, date_info =metadata.game_start, riot_game_id = metadata.matchid))
+        # request.app.state.db.execute(query)
+        # query = text("select game_id from Games where riot_game_id =:id").bindparams(id=metadata.matchid) #maybe can get game id in same execution as insert?
+        # result = request.app.state.db.execute(query)
+        # game_id = result.fetchone() 
 
+        #print(matchdict.players)
+        matchrounds = metadata.rounds_played
+        player_data = match.players.all_players
+        for player in player_data:
+            if player.tag == playertag and player.name == playerign:
+                didwin = False
+                if player.team == winteam:
+                    didwin = True
+                shots = player.stats.bodyshots + player.stats.headshots +player.stats.legshots
+                print(player.team, didwin, player.character, player.stats.score/matchrounds, player.stats.kills, player.stats.deaths, player.stats.assists, player.stats.headshots/shots, player.currenttier)
+                # insertrow = {"game_id" : 0
+                # ,"player_id" : player_id ,"team": player['team'],won,agent,_,average_combat_score,kills,deaths,assists,kills_deaths,headshot_ratio,first_kills,first_deaths,side,tier,_}
+    return {}
+
+#do trigger for this pls
     
     
 
 @app.get("/most_played_agent")
 def most_played_agent(
+    
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -204,13 +206,6 @@ def most_played_agent(
         "avgHeadShotRatio": player_stats_data.avgHeadShotRatio,
         "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
     }
-
-
-# make kd tree work, assiugn agents to numbers...corresponding to roles in game maybe
-
-# @app.get("/recommend_agent")
-# def get_agent(request: Request):
-#     curr_map = request.args['map']
 
 
 @app.get("/most_played_agent")

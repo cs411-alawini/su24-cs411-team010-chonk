@@ -14,10 +14,7 @@ dependencies = [
     "pyjwt>=2.8.0",
     "scipy>=1.14.0",
     "httpx>=0.27.0",
-<<<<<<< HEAD
-=======
     "valo-api[async]>=2.0.8",
->>>>>>> ec9a407eb4fba8f236cecd35bbac31055ada30b3
 ]
 readme = "README.md"
 requires-python = ">= 3.12"
