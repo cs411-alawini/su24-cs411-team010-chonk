@@ -220,26 +220,18 @@ def agent_synergies(
     
     return {"agent_synergies": f"{agent_synergies}"}
 
-@app.get("/player_most_played_agent")
+@app.get("/pro_mains")
 def player_most_played_agent(
-    request: Request,
-    current_user: Annotated[User, Depends(get_current_user)],
+    request: Request, agent: str
 ):
-    player_id = current_user.player_id
-    agent_query = text(
-        "select agent_id as agent from Player_Stats p where player_id=:player_id group by p.agent_id order by count(p.agent_id) desc limit 1"
-    ).bindparams(player_id=player_id)
-    result = request.app.state.db.execute(agent_query)
-    most_played_user = result.fetchone()
-    agent = most_played_user.agent
-
     query = text(
-        "SELECT DISTINCT p1.player_id FROM Player_Stats p1 WHERE :agent=(SELECT agent_id AS games_played FROM Player_Stats p2 WHERE p2.player_id = p1.player_id GROUP BY agent_id ORDER BY COUNT(agent_id) DESC LIMIT 1) GROUP BY p1.player_id ORDER BY COUNT(p1.agent_id) DESC LIMIT 15"
+        "SELECT p1.player_id, count(agent_id) from Player_Stats p1 where p1.tier_id = 21 and (select a.agent_id from Agents a where a.agent_name = :agent)=(SELECT p2.agent_id FROM Player_Stats p2 WHERE p2.player_id = p1.player_id GROUP BY p2.agent_id ORDER BY COUNT(p2.agent_id) DESC LIMIT 1) group by player_id order by count(agent_id) desc limit 20"
     ).bindparams(agent=agent)
     result = request.app.state.db.execute(query)
     player = result.fetchall()
+    player_to_count = {}
     for agent in player:
-        print(agent)
+        player_to_count[agent[0]] = agent[1]
     
-    return {"player_most_played_agent": f"{[row for row in player]}"}
+    return {"player_most_played_agent": player_to_count}
 
