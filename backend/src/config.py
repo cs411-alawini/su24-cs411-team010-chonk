@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
+    henrik_api_key: SecretStr | None = None
+
     model_config = SettingsConfigDict(env_file=".env")
 
 
