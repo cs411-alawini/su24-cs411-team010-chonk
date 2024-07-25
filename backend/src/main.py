@@ -180,6 +180,7 @@ async def update_user_data():
     
     for player in matchdata['player']:
         if player['tagLine'] == playertag and player['gameName'] == playerign:
+            print("lol")
 
     
     
@@ -194,9 +195,51 @@ def most_played_agent(
         "select agent_name as agent from Player_Stats p left join Agents a on p.agent_id = a.agent_id where player_id=:player_id group by p.agent_id order by count(p.agent_id) desc limit 1"
     ).bindparams(player_id=player_id)
     result = request.app.state.db.execute(query)
+    player_stats_data = result.fetchone()
+    return {
+        "avgKillsPerGame": player_stats_data.avgKillsPerGame,
+        "avgDeathsPerGame": player_stats_data.avgDeathsPerGame,
+        "avgAssistsPerGame": player_stats_data.avgAssistsPerGame,
+        "avgCombatScorePerGame": player_stats_data.avgCombatScorePerGame,
+        "avgHeadShotRatio": player_stats_data.avgHeadShotRatio,
+        "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
+    }
+
+
+# make kd tree work, assiugn agents to numbers...corresponding to roles in game maybe
+
+# @app.get("/recommend_agent")
+# def get_agent(request: Request):
+#     curr_map = request.args['map']
+
+
+@app.get("/most_played_agent")
+def most_played_agent(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "select agent_name as agent from Player_Stats p left join Agents a on p.agent_id = a.agent_id where player_id=:player_id group by p.agent_id order by count(p.agent_id) desc limit 1"
+    ).bindparams(player_id=player_id)
+    result = request.app.state.db.execute(query)
     most_played_user = result.fetchone()
     agent = most_played_user.agent
     return {"most_played_agent": f"{agent}"}
+
+@app.get("/most_played_map")
+def most_played_map(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT map_name as map FROM Player_Stats p JOIN Game g ON p.game_id = g.game_id JOIN Maps m ON g.map_id = m.map_id WHERE player_id=:player_id GROUP BY m.map_id ORDER BY COUNT(m.map_id) DESC LIMIT 1"
+    ).bindparams(player_id=player_id)
+    result = request.app.state.db.execute(query)
+    most_played_map = result.fetchone()
+    map = most_played_map.map
+    return {"most_played_map": f"{map}"}
 
 
 @app.get("/pro_lookalike")
@@ -223,3 +266,41 @@ def get_pro_lookalike(
     user_stats = list(request.app.state.db.execute(query))
     _, best_match = pro_tree.query(user_stats, k=1)
     return {"best_match": f"{pros[best_match[0]][0]}"}
+
+
+@app.get("/agent_synergies")
+def agent_synergies(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    agent_query = text(
+        "select agent_id as agent from Player_Stats p where player_id=:player_id group by p.agent_id order by count(p.agent_id) desc limit 1"
+    ).bindparams(player_id=player_id)
+    result = request.app.state.db.execute(agent_query)
+    most_played_user = result.fetchone()
+    agent = most_played_user.agent
+
+    query = text(
+        "SELECT agent_name AS synergies FROM Player_Stats p JOIN Player ON p.player_id = Player.player_id LEFT JOIN Agents a ON p.agent_id = a.agent_id WHERE game_id IN (SELECT game_id FROM Player_Stats p WHERE agent_id=:agent) AND p.tier_id = Player.current_tier_id GROUP BY agent_name ORDER BY COUNT(agent_name) DESC LIMIT 15"
+    ).bindparams(agent=agent)
+    result = request.app.state.db.execute(query)
+    agent_synergies = result.fetchall()
+    
+    return {"agent_synergies": f"{agent_synergies}"}
+
+@app.get("/pro_mains")
+def player_most_played_agent(
+    request: Request, agent: str
+):
+    query = text(
+        "SELECT p1.player_id, count(agent_id) from Player_Stats p1 where p1.tier_id = 21 and (select a.agent_id from Agents a where a.agent_name = :agent)=(SELECT p2.agent_id FROM Player_Stats p2 WHERE p2.player_id = p1.player_id GROUP BY p2.agent_id ORDER BY COUNT(p2.agent_id) DESC LIMIT 1) group by player_id order by count(agent_id) desc limit 20"
+    ).bindparams(agent=agent)
+    result = request.app.state.db.execute(query)
+    player = result.fetchall()
+    player_to_count = {}
+    for agent in player:
+        player_to_count[agent[0]] = agent[1]
+    
+    return {"player_most_played_agent": player_to_count}
+
