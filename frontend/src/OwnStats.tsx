@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -16,13 +15,6 @@ import {
 import config from "./config";
 import OwnStatsGraph from "./OwnStatsGraph.tsx";
 import ValoEmblem from "./assets/ValoEmblem.png";
-=======
-import React, { useState, useEffect } from 'react';
-import { Box, Heading, Text, VStack, Stat, StatLabel, StatNumber, Button, HStack, useDisclosure, Image, Divider } from '@chakra-ui/react';
-import config from './config';
-import OwnStatsGraph from './OwnStatsGraph.tsx';
-import ValoEmblem from './assets/ValoEmblem.png';
->>>>>>> e55e6f2 (Own-stats reorganisation)
 
 // Define the interface for the player stats
 interface PlayerStats {
@@ -213,6 +205,15 @@ const PlayerStats: React.FC = () => {
     // }
     setStats(mockStats[timeSpan]);
   }, [timeSpan]);
+
+  useEffect(() => {
+    // if (mockStats[timeSpan]) {
+    //   setStats(mockStats[timeSpan]);
+    // } else {
+    //   fetchStats(timeSpan);
+    // }
+    setStats(mockStats[timeSpan]);
+  }, [timeSpan]);
   const handleGraphOpen = (dataKey: string, title: string) => {
     setModalData(mockMonthlyData);
     setModalTitle(title);
@@ -228,122 +229,234 @@ const PlayerStats: React.FC = () => {
     return <Text>Loading...</Text>;
   }
 
-    return (
-        <Box style={{ padding: '30px', backgroundColor: '#2d3748' }}>
-          <Box style={{ backgroundColor: '#1a202c', borderRadius: '10px', padding: '40px', boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}>
-            <HStack>
-                <Image src={ValoEmblem} alt="Valo Emblem" boxSize="70px" objectFit="contain"/>
-                <Heading as="h1" size="xl" style={{ marginBottom: '20px', color:'white' }}>Player Stats</Heading>
+  return (
+    <Box style={{ padding: "30px", backgroundColor: "#2d3748" }}>
+      <Box
+        style={{
+          backgroundColor: "#1a202c",
+          borderRadius: "10px",
+          padding: "40px",
+          boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+        }}
+      >
+        <HStack>
+          <Image
+            src={ValoEmblem}
+            alt="Valo Emblem"
+            boxSize="70px"
+            objectFit="contain"
+          />
+          <Heading
+            as="h1"
+            size="xl"
+            style={{ marginBottom: "20px", color: "white" }}
+          >
+            Player Stats
+          </Heading>
+        </HStack>
+
+        <Box padding="5px"></Box>
+
+        <HStack spacing={4} justifyContent="start" marginBottom={6}>
+          <Button variant="valoRed" onClick={() => setTimeSpan("overall")}>
+            Overall
+          </Button>
+          <Button variant="valoRed" onClick={() => setTimeSpan("3months")}>
+            3 Months
+          </Button>
+          <Button variant="valoRed" onClick={() => setTimeSpan("6months")}>
+            6 Months
+          </Button>
+          <Button variant="valoRed" onClick={() => setTimeSpan("1year")}>
+            1 Year
+          </Button>
+        </HStack>
+
+        <HStack spacing={2}>
+          <Stat>
+            <StatLabel style={{ color: "white" }}>Username</StatLabel>
+            <StatNumber style={{ color: "white" }}>{stats.username}</StatNumber>
+          </Stat>
+        </HStack>
+
+        <Box padding="10px"></Box>
+
+        <HStack spacing={20} align="start">
+          <VStack spacing={4} align="start">
+            <HStack spacing="90px">
+              <Stat>
+                <StatLabel style={{ color: "white" }}>
+                  Avg Kills per Game
+                </StatLabel>
+                <StatNumber style={{ color: "white" }}>
+                  {stats.avgKillsPerGame}
+                </StatNumber>
+              </Stat>
+              <Button
+                onClick={() =>
+                  handleGraphOpen("avgKillsPerGame", "Average Kills per Game")
+                }
+              >
+                Graph
+              </Button>
             </HStack>
 
-            <Box padding='5px'></Box>
+            <HStack spacing="70px">
+              <Stat>
+                <StatLabel style={{ color: "white" }}>
+                  Avg Deaths per Game
+                </StatLabel>
+                <StatNumber style={{ color: "white" }}>
+                  {stats.avgDeathsPerGame}
+                </StatNumber>
+              </Stat>
+              <Button
+                onClick={() =>
+                  handleGraphOpen("avgDeathsPerGame", "Average Deaths per Game")
+                }
+              >
+                Graph
+              </Button>
+            </HStack>
 
-            <HStack spacing={4} justifyContent="start" marginBottom={6}>
-              <Button variant="valoRed" onClick={() => setTimeSpan("overall")}>Overall</Button>
-              <Button variant="valoRed" onClick={() => setTimeSpan("3months")}>3 Months</Button>
-              <Button variant="valoRed" onClick={() => setTimeSpan("6months")}>6 Months</Button>
-              <Button variant="valoRed" onClick={() => setTimeSpan("1year")}>1 Year</Button>
+            <HStack spacing="70px">
+              <Stat>
+                <StatLabel style={{ color: "white" }}>
+                  Avg Assists per Game
+                </StatLabel>
+                <StatNumber style={{ color: "white" }}>
+                  {stats.avgAssistsPerGame}
+                </StatNumber>
+              </Stat>
+              <Button
+                onClick={() =>
+                  handleGraphOpen(
+                    "avgAssistsPerGame",
+                    "Average Assists per Game"
+                  )
+                }
+              >
+                Graph
+              </Button>
+            </HStack>
+
+            <HStack spacing="25px">
+              <Stat>
+                <StatLabel style={{ color: "white" }}>
+                  Avg Combat Score per Game
+                </StatLabel>
+                <StatNumber style={{ color: "white" }}>
+                  {stats.avgCombatScorePerGame}
+                </StatNumber>
+              </Stat>
+              <Button
+                onClick={() =>
+                  handleGraphOpen(
+                    "avgCombatScorePerGame",
+                    "Average Combat Score per Game"
+                  )
+                }
+              >
+                Graph
+              </Button>
+            </HStack>
+
+            <HStack spacing="76px">
+              <Stat>
+                <StatLabel style={{ color: "white" }}>
+                  Avg Head Shot Ratio
+                </StatLabel>
+                <StatNumber style={{ color: "white" }}>
+                  {stats.avgHeadShotRatio}
+                </StatNumber>
+              </Stat>
+              <Button
+                onClick={() =>
+                  handleGraphOpen("avgHeadShotRatio", "Average Head Shot Ratio")
+                }
+              >
+                Graph
+              </Button>
+            </HStack>
+
+            <HStack spacing="40px">
+              <Stat>
+                <StatLabel style={{ color: "white" }}>
+                  Avg First Bloods per Game
+                </StatLabel>
+                <StatNumber style={{ color: "white" }}>
+                  {stats.avgFirstBloodsPerGame}
+                </StatNumber>
+              </Stat>
+              <Button
+                onClick={() =>
+                  handleGraphOpen(
+                    "avgFirstBloodsPerGame",
+                    "Average First Bloods per Game"
+                  )
+                }
+              >
+                Graph
+              </Button>
+            </HStack>
+          </VStack>
+
+          <VStack spacing={4} align="start">
+            <HStack spacing={2}>
+              <Stat>
+                <StatLabel style={{ color: "white" }}>
+                  Most Played Map
+                </StatLabel>
+                <StatNumber style={{ color: "white" }}>
+                  {stats.mostPlayedMap}
+                </StatNumber>
+              </Stat>
             </HStack>
 
             <HStack spacing={2}>
-                <Stat>
-                <StatLabel style={{ color: 'white'}}>Username</StatLabel>
-                <StatNumber style={{ color: 'white' }}>{stats.username}</StatNumber>
-                </Stat>
+              <Stat>
+                <StatLabel style={{ color: "white" }}>
+                  Most Played Agent
+                </StatLabel>
+                <StatNumber style={{ color: "white" }}>
+                  {stats.mostPlayedAgent}
+                </StatNumber>
+              </Stat>
             </HStack>
 
-            <Box padding='10px'>
-            </Box>
-
-            <HStack spacing={20} align="start">
-                <VStack spacing={4} align="start">
-
-                    <HStack spacing='90px'>
-                        <Stat>
-                        <StatLabel style={{ color: 'white'}}>Avg Kills per Game</StatLabel>
-                        <StatNumber style={{ color: 'white' }}>{stats.avgKillsPerGame}</StatNumber>
-                        </Stat>
-                        <Button onClick={() => handleGraphOpen("avgKillsPerGame", "Average Kills per Game")}>Graph</Button>
-                    </HStack>
-
-                    <HStack spacing='70px'>
-                        <Stat>
-                        <StatLabel style={{ color: 'white' }}>Avg Deaths per Game</StatLabel>
-                        <StatNumber style={{ color: 'white' }}>{stats.avgDeathsPerGame}</StatNumber>
-                        </Stat>
-                        <Button onClick={() => handleGraphOpen("avgDeathsPerGame", "Average Deaths per Game")}>Graph</Button>
-                    </HStack>
-
-                    <HStack spacing='70px'>
-                        <Stat>
-                        <StatLabel style={{ color: 'white' }}>Avg Assists per Game</StatLabel>
-                        <StatNumber style={{ color: 'white' }}>{stats.avgAssistsPerGame}</StatNumber>
-                        </Stat>
-                        <Button onClick={() => handleGraphOpen("avgAssistsPerGame", "Average Assists per Game")}>Graph</Button>
-                    </HStack>
-
-                    <HStack spacing='25px'>
-                        <Stat>
-                        <StatLabel style={{ color: 'white' }}>Avg Combat Score per Game</StatLabel>
-                        <StatNumber style={{ color: 'white' }}>{stats.avgCombatScorePerGame}</StatNumber>
-                        </Stat>
-                        <Button onClick={() => handleGraphOpen("avgCombatScorePerGame", "Average Combat Score per Game")}>Graph</Button>
-                    </HStack>
-
-                    <HStack spacing='76px'>
-                        <Stat>
-                        <StatLabel style={{ color: 'white' }}>Avg Head Shot Ratio</StatLabel>
-                        <StatNumber style={{ color: 'white' }}>{stats.avgHeadShotRatio}</StatNumber>
-                        </Stat>
-                        <Button onClick={() => handleGraphOpen("avgHeadShotRatio", "Average Head Shot Ratio")}>Graph</Button>
-                    </HStack>
-
-                    <HStack spacing='40px'>
-                        <Stat>
-                        <StatLabel style={{ color: 'white' }}>Avg First Bloods per Game</StatLabel>
-                        <StatNumber style={{ color: 'white' }}>{stats.avgFirstBloodsPerGame}</StatNumber>
-                        </Stat>
-                        <Button onClick={() => handleGraphOpen("avgFirstBloodsPerGame", "Average First Bloods per Game")}>Graph</Button>
-                    </HStack>
-                </VStack>
-
-                <VStack spacing={4} align="start">
-
-                    <HStack spacing={2}>
-                        <Stat>
-                        <StatLabel style={{ color: 'white' }}>Most Played Map</StatLabel>
-                        <StatNumber style={{ color: 'white' }}>{stats.mostPlayedMap}</StatNumber>
-                        </Stat>
-                    </HStack>
-
-                    <HStack spacing={2}>
-                        <Stat>
-                        <StatLabel style={{ color: 'white' }}>Most Played Agent</StatLabel>
-                        <StatNumber style={{ color: 'white' }}>{stats.mostPlayedAgent}</StatNumber>
-                        </Stat>
-                    </HStack>
-
-                    <HStack spacing={2}>
-                        <Stat>
-                        <StatLabel style={{ color: 'white' }}>Defender Win Rate</StatLabel>
-                        <StatNumber style={{ color: 'white' }}>{stats.defenderWinRate}%</StatNumber>
-                        </Stat>
-                    </HStack>
-
-                    <HStack spacing={2}>
-                        <Stat>
-                        <StatLabel style={{ color: 'white' }}>Attacker Win Rate</StatLabel>
-                        <StatNumber style={{ color: 'white' }}>{stats.attackerWinRate}%</StatNumber>
-                        </Stat>
-                    </HStack>
-
-                </VStack>
-
+            <HStack spacing={2}>
+              <Stat>
+                <StatLabel style={{ color: "white" }}>
+                  Defender Win Rate
+                </StatLabel>
+                <StatNumber style={{ color: "white" }}>
+                  {stats.defenderWinRate}%
+                </StatNumber>
+              </Stat>
             </HStack>
-          </Box>
-              <OwnStatsGraph isOpen={isOpen} onClose={onClose} data={modalData} title={modalTitle} dataKey={modalDataKey} />
-        </Box>
-    );
+
+            <HStack spacing={2}>
+              <Stat>
+                <StatLabel style={{ color: "white" }}>
+                  Attacker Win Rate
+                </StatLabel>
+                <StatNumber style={{ color: "white" }}>
+                  {stats.attackerWinRate}%
+                </StatNumber>
+              </Stat>
+            </HStack>
+          </VStack>
+        </HStack>
+      </Box>
+      <OwnStatsGraph
+        isOpen={isOpen}
+        onClose={onClose}
+        data={modalData}
+        title={modalTitle}
+        dataKey={modalDataKey}
+      />
+    </Box>
+  );
 };
 
 export default PlayerStats;
