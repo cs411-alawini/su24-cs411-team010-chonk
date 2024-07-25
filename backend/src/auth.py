@@ -27,7 +27,8 @@ def get_user(db, username: str):
     statement = text("select * from User where username=:username").bindparams(
         username=username
     )
-    user_data = db.execute(statement).fetchone()
+    with db.connect() as connection:
+        user_data = connection.execute(statement).fetchone()
     if not user_data:
         return None
 
@@ -44,23 +45,25 @@ def register_user(db, username: str, password: str):
     statement = text("select * from Player where player_id=:player_id").bindparams(
         player_id=username
     )
-    player_data = db.execute(statement).fetchone()
+    with db.connect() as connection:
+        player_data = connection.execute(statement).fetchone()
 
-    if not player_data:
+        if not player_data:
+            statement = text(
+                "insert into Player (player_id, current_tier_id) values (:player_id, :current_tier_id)"
+            ).bindparams(player_id=username, current_tier_id=3)
+            connection.execute(statement)
+            connection.commit()
+
         statement = text(
-            "insert into Player (player_id, current_tier_id) values (:player_id, :current_tier_id)"
-        ).bindparams(player_id=username, current_tier_id=3)
-        db.execute(statement)
-
-    statement = text(
-        "insert into User (username, player_id, password_hash) values (:username, :player_id, :password_hash)"
-    ).bindparams(
-        username=username,
-        player_id=username,
-        password_hash=get_password_hash(password),
-    )
-    db.execute(statement)
-    db.commit()
+            "insert into User (username, player_id, password_hash) values (:username, :player_id, :password_hash)"
+        ).bindparams(
+            username=username,
+            player_id=username,
+            password_hash=get_password_hash(password),
+        )
+        connection.execute(statement)
+        connection.commit()
 
 
 def authenticate_user(db, username: str, password: str):
