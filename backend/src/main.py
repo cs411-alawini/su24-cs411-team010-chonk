@@ -90,14 +90,32 @@ def get_maps(request: Request):
 
 @app.get("/homepage-stats")
 def get_homepage_stats(request: Request):
-    query = text(
+    agent_query = text(
         "select agent_name, AVG(kd) as avg_kd from Agent_Stats natural join Agents group by agent_id order by avg_kd desc limit 1"
     )
+    weapon_query = text(
+        "select weapon_name, count(*) as game_count from Weapon_Stats natural join Weapons group by weapon_id order by game_count desc limit 1"
+    )
+    map_query = text(
+        "select map_name, count(*) as game_count from Map_Stats natural join Maps group by map_id order by game_count desc limit 1"
+    )
     with request.app.state.db.connect() as connection:
-        result = connection.execute(query)
-    best_agent = result.fetchone()
+        agent_result = connection.execute(agent_query)
+        best_agent = agent_result.fetchone()
+
+        weapon_result = connection.execute(weapon_query)
+        best_weapon = weapon_result.fetchone()
+
+        map_result = connection.execute(map_query)
+        best_map = map_result.fetchone()
+
     return {
         "best_agent": {"agent_name": best_agent.agent_name, "kd": best_agent.avg_kd},
+        "best_weapon": {
+            "weapon_name": best_weapon.weapon_name,
+            "game_count": best_weapon.game_count,
+        },
+        "best_map": {"map_name": best_map.map_name, "game_count": best_map.game_count},
     }
 
 

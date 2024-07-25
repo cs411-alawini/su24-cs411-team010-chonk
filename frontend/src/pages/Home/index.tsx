@@ -62,6 +62,18 @@ const Home = (): React.ReactElement => {
   const [passwordError, setPasswordError] = useState(false);
 
   const {
+    isFetching: isFetchingStats,
+    error: statsError,
+    data: statsData,
+  } = useQuery({
+    queryKey: ["statsData"],
+    queryFn: () =>
+      fetch(config.apiUrl + "/homepage-stats", {
+        headers: { Authorization: "Bearer " + localStorage.token },
+      }).then((res) => res.json()),
+  });
+
+  const {
     isFetching: isFetchingProfile,
     error: profileError,
     data: profileData,
@@ -237,21 +249,33 @@ const Home = (): React.ReactElement => {
           <Spacer />
 
           <Stat>
-            <StatLabel>Best Pro Player</StatLabel>
-            <StatNumber>Reyna</StatNumber>
-            <StatHelpText>1.13 KD</StatHelpText>
+            <StatLabel>Best Agent</StatLabel>
+            <Skeleton isLoaded={!isFetchingStats}>
+              <StatNumber>{statsData?.best_agent.agent_name}</StatNumber>
+              <StatHelpText>
+                {Number(statsData?.best_agent.kd.toFixed(2))} KD
+              </StatHelpText>
+            </Skeleton>
           </Stat>
 
           <Stat>
             <StatLabel>Most Used Weapon</StatLabel>
-            <StatNumber>Vandal</StatNumber>
-            <StatHelpText>8900 Games</StatHelpText>
+            <Skeleton isLoaded={!isFetchingStats}>
+              <StatNumber>{statsData?.best_weapon.weapon_name}</StatNumber>
+              <StatHelpText>
+                {statsData?.best_weapon.game_count} Games
+              </StatHelpText>
+            </Skeleton>
           </Stat>
 
           <Stat>
-            <StatLabel>Most Played Map</StatLabel>
-            <StatNumber>Ascent</StatNumber>
-            <StatHelpText>4500 Games</StatHelpText>
+            <StatLabel>Most Played Weapon</StatLabel>
+            <Skeleton isLoaded={!isFetchingStats}>
+              <StatNumber>{statsData?.best_map.map_name}</StatNumber>
+              <StatHelpText>
+                {statsData?.best_map.game_count} Games
+              </StatHelpText>
+            </Skeleton>
           </Stat>
         </HStack>
 
