@@ -99,6 +99,10 @@ def get_homepage_stats(request: Request):
     map_query = text(
         "select map_name, count(*) as game_count from Map_Stats natural join Maps group by map_id order by game_count desc limit 1"
     )
+
+    top_agents_query = text(
+        "select agent_name, AVG(win_rate) as avg_win_rate, AVG(pick_rate) as avg_pick_rate, AVG(kd) as avg_kd, AVG(acs) as average_acs, SUM(num_matches) as match_count from Agent_Stats natural join Agents group by agent_id order by avg_win_rate desc limit 5"
+    )
     with request.app.state.db.connect() as connection:
         agent_result = connection.execute(agent_query)
         best_agent = agent_result.fetchone()
@@ -109,6 +113,21 @@ def get_homepage_stats(request: Request):
         map_result = connection.execute(map_query)
         best_map = map_result.fetchone()
 
+        top_agents_result = connection.execute(top_agents_query)
+        top_agents = top_agents_result.fetchall()
+
+        top_agents_formatted = [
+            {
+                "agent_name": agent.agent_name,
+                "avg_win_rate": agent.avg_win_rate,
+                "avg_pick_rate": agent.avg_pick_rate,
+                "avg_kd": agent.avg_kd,
+                "average_acs": agent.average_acs,
+                "match_count": agent.match_count,
+            }
+            for agent in top_agents
+        ]
+
     return {
         "best_agent": {"agent_name": best_agent.agent_name, "kd": best_agent.avg_kd},
         "best_weapon": {
@@ -116,6 +135,7 @@ def get_homepage_stats(request: Request):
             "game_count": best_weapon.game_count,
         },
         "best_map": {"map_name": best_map.map_name, "game_count": best_map.game_count},
+        "top_agents": top_agents_formatted,
     }
 
 

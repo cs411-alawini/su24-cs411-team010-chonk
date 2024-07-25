@@ -61,11 +61,7 @@ const Home = (): React.ReactElement => {
   const [riotIdError, setRiotIdError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
 
-  const {
-    isFetching: isFetchingStats,
-    error: statsError,
-    data: statsData,
-  } = useQuery({
+  const { isFetching: isFetchingStats, data: statsData } = useQuery({
     queryKey: ["statsData"],
     queryFn: () =>
       fetch(config.apiUrl + "/homepage-stats", {
@@ -303,51 +299,17 @@ const Home = (): React.ReactElement => {
                 </Tr>
               </Thead>
               <Tbody>
-                <Tr>
-                  <Td>1</Td>
-                  <Td>Reyna</Td>
-                  <Td>25.4%</Td>
-                  <Td>25.4%</Td>
-                  <Td>1.13</Td>
-                  <Td>225</Td>
-                  <Td>220,005</Td>
-                </Tr>
-                <Tr>
-                  <Td>2</Td>
-                  <Td>Jett</Td>
-                  <Td>25.4%</Td>
-                  <Td>25.4%</Td>
-                  <Td>1.13</Td>
-                  <Td>225</Td>
-                  <Td>220,005</Td>
-                </Tr>
-                <Tr>
-                  <Td>3</Td>
-                  <Td>Raze</Td>
-                  <Td>25.4%</Td>
-                  <Td>25.4%</Td>
-                  <Td>1.13</Td>
-                  <Td>225</Td>
-                  <Td>220,005</Td>
-                </Tr>
-                <Tr>
-                  <Td>4</Td>
-                  <Td>Sage</Td>
-                  <Td>25.4%</Td>
-                  <Td>25.4%</Td>
-                  <Td>1.13</Td>
-                  <Td>225</Td>
-                  <Td>220,005</Td>
-                </Tr>
-                <Tr>
-                  <Td>5</Td>
-                  <Td>Gekko</Td>
-                  <Td>25.4%</Td>
-                  <Td>25.4%</Td>
-                  <Td>1.13</Td>
-                  <Td>225</Td>
-                  <Td>220,005</Td>
-                </Tr>
+                {statsData?.top_agents.map((agent: any, idx: Number) => (
+                  <Tr>
+                    <Td>{idx + 1}</Td>
+                    <Td>{agent.agent_name}</Td>
+                    <Td>{Number(agent.avg_win_rate.toFixed(2))}%</Td>
+                    <Td>{Number(agent.avg_pick_rate.toFixed(2))}%</Td>
+                    <Td>{Number(agent.avg_kd.toFixed(2))}</Td>
+                    <Td>{Math.round(agent.average_acs)}</Td>
+                    <Td>{agent.match_count.toLocaleString()}</Td>
+                  </Tr>
+                ))}
               </Tbody>
             </Table>
           </TableContainer>
