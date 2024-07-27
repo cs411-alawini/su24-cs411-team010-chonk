@@ -238,8 +238,42 @@ def player_most_played_agent(
     ).bindparams(agent=agent)
     result = request.app.state.db.execute(query)
     player = result.fetchall()
-    for agent in player:
-        print(agent)
     
     return {"player_most_played_agent": f"{[row for row in player]}"}
 
+@app.get("/agent_recommendations")
+def agent_recommendations(
+    request: Request,
+    # current_user: Annotated[User, Depends(get_current_user)],
+):
+    # player_id = current_user.player_id
+    # TO-DO: probably use a dropdown or button to select map and rank
+
+    query = text(
+        "SELECT a.agent_name, z.win_rate FROM"
+        " (SELECT p.agent_id FROM Player_Stats p JOIN Game g ON p.game_id = g.game_id JOIN Maps m ON m.map_id = g.map_id WHERE m.map_name = 'Split' GROUP BY agent_id ORDER BY COUNT(agent_id) DESC LIMIT 5)"
+        " AS y LEFT JOIN"
+        " (SELECT a.win_rate, a.agent_id FROM Agent_Stats a JOIN Maps m ON m.map_id = a.map_id WHERE m.map_name = 'Split' AND a.tier_id = 10)"
+        " AS z ON y.agent_id = z.agent_id JOIN Agents a ON a.agent_id = y.agent_id ORDER BY z.win_rate DESC"
+    )
+    result = request.app.state.db.execute(query)
+    recommendations = result.fetchall()
+
+    return {"agent_recommendations": f"{recommendations}"}
+
+@app.get("/top_agent_map")
+def top_agent_map(
+    request: Request,
+    # current_user: Annotated[User, Depends(get_current_user)],
+):
+    # player_id = current_user.player_id
+
+    query = text(
+        "SELECT m.map_name, a.agent_name, MAX(astats.acs) AS MaxACS"
+        " FROM Agent_Stats astats JOIN Agents a ON astats.agent_id = a.agent_id JOIN Map_Stats mstats ON astats.map_id = mstats.map_id AND astats.tier_id = mstats.tier_id JOIN Maps m ON mstats.map_id = m.map_id"
+        " GROUP BY m.map_name, a.agent_name ORDER BY m.map_name, MaxACS DESC LIMIT 15"
+    )
+    result = request.app.state.db.execute(query)
+    top_agent_map = result.fetchall()
+
+    return {"top_agent_map": f"{top_agent_map}"}
