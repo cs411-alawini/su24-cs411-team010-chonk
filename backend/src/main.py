@@ -150,8 +150,6 @@ async def update_user_data(request: Request, current_user: Annotated[User, Depen
     settings = get_settings()
     if settings.henrik_api_key is None:
         raise ValueError("henrik_api_key is required")
-    
-
 
 
     matches = [ {
@@ -167,7 +165,7 @@ async def update_user_data(request: Request, current_user: Annotated[User, Depen
         "queue": "Standard",
         "season_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
         "platform": "PC",
-        "matchid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "matchid": "3fa85f64-5717-4562-b3fc-2c",
         "premier_info": {
           "tournament_id": "string",
           "matchup_id": "string"
@@ -273,7 +271,6 @@ async def update_user_data(request: Request, current_user: Annotated[User, Depen
             winteam = "red"
         query = text("select map_id from Maps where map_name = :map").bindparams(map= metadata["map"])
         mapp = request.app.state.db.execute(query).first()[0]
-        request.app.state.db.commit()
         stmst = text("insert into Game(map_id, date_info, riot_id) values(:map, :game_start, :matchid)").bindparams(map= mapp,game_start = metadata["game_start"], matchid = metadata["matchid"])
         request.app.state.db.execute(stmst)
         query = text("select game_id from Game where riot_id =:id").bindparams(id=metadata["matchid"]) #maybe can get game id in same execution as insert?
@@ -297,7 +294,6 @@ async def update_user_data(request: Request, current_user: Annotated[User, Depen
                     stmst = text("insert into playerstats1(game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr ,:hr,:tid)").bindparams(gid=game_id,pid= player_id ,w=didwin ,aid=agent,acs=player["stats"]["score"]/matchrounds,k=player["stats"]["kills"],d=player["stats"]["deaths"],a=player["stats"]["assists"],adr = player["damage_made"]/matchrounds,hr=player["stats"]["headshots"]/shots,tid=player["currenttier"])
                     request.app.state.db.execute(stmst)
                     print("hi")
-                    request.app.state.db.commit()
     query = text("select * from playerstats1 where game_id =:id and player_id = :playerid").bindparams(id=game_id, playerid=player_id)
     print(request.app.state.db.execute(query).first())
     return {}
