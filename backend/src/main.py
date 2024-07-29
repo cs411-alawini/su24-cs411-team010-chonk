@@ -139,47 +139,203 @@ async def player_stats(
 
 @app.get("/update_user_data")
 async def update_user_data(request: Request, current_user: Annotated[User, Depends(get_current_user)],):
-    playertag = "0404"
-    playerign = "meow"
+   
     player_id = current_user.player_id
+    if '#' not in player_id:
+         return "Bad ign"
+    ign_tag = player_id.split('#')
+    playerign = ign_tag[0]
+    playertag = ign_tag[1]
 
     settings = get_settings()
     if settings.henrik_api_key is None:
         raise ValueError("henrik_api_key is required")
     
 
-    valo_api.set_api_key(settings.henrik_api_key.get_secret_value())
-    matches = await valo_api.get_match_history_by_name_v3_async(  # type: ignore
-    "na", playerign, playertag, game_mode="competitive"
-    )
 
+
+    matches = [ {
+      "metadata": {
+        "map": "Ascent",
+        "game_version": "release-03.12-shipping-16-649370",
+        "game_length": 2356581,
+        "game_start": 1641934366,
+        "game_start_patched": "Tuesday, January 11, 2022 9:52 PM",
+        "rounds_played": 23,
+        "mode": "Competitive",
+        "mode_id": "competitive",
+        "queue": "Standard",
+        "season_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "platform": "PC",
+        "matchid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "premier_info": {
+          "tournament_id": "string",
+          "matchup_id": "string"
+        },
+        "region": "eu",
+        "cluster": "London"
+      },
+      "players": {
+          "all_players": [
+          {
+            "puuid": "54942ced-1967-5f66-8a16-1e0dae875641",
+            "name": "meow",
+            "tag": "0404",
+            "team": "Red",
+            "level": 104,
+            "character": "Sova",
+            "currenttier": 12,
+            "currenttier_patched": "Gold 1",
+            "player_card": "8edf22c5-4489-ab41-769a-07adb4c454d6",
+            "player_title": "e3ca05a4-4e44-9afe-3791-7d96ca8f71fa",
+            "party_id": "b7590bd4-e2c9-4dd3-8cbf-05f04158375e",
+            "session_playtime": {
+              "minutes": 26,
+              "seconds": 1560,
+              "milliseconds": 1560000
+            },
+            "ability_casts": {
+              "c_cast": 16,
+              "q_cast": 5,
+              "e_cast": 26,
+              "x_cast": 0
+            },
+            "stats": {
+              "score": 4869,
+              "kills": 18,
+              "deaths": 18,
+              "assists": 5,
+              "bodyshots": 48,
+              "headshots": 9,
+              "legshots": 5
+            },
+            "economy": {
+              "spent": {
+                "overall": 59750,
+                "average": 2598
+              },
+              "loadout_value": {
+                "overall": 71700,
+                "average": 3117
+              }
+            },
+            "damage_made": 3067,
+            "damage_received": 3115
+          }
+        ],
+      },
+      "teams": {
+        "red": {
+          "has_won": True,
+          "rounds_won": 13,
+          "rounds_lost": 10,
+          "roaster": {
+            "members": [
+              "string"
+            ],
+            "name": "string",
+            "tag": "string",
+            "customization": {
+              "icon": "string",
+              "image": "string",
+              "primary": "string",
+              "secondary": "string",
+              "tertiary": "string"
+            }
+          }
+        },
+        "blue": {
+          "has_won": False,
+          "rounds_won": 13,
+          "rounds_lost": 10,
+          "roaster": {
+            "members": [
+              "string"
+            ],
+            "name": "string",
+            "tag": "string",
+            "customization": {
+              "icon": "string",
+              "image": "string",
+              "primary": "string",
+              "secondary": "string",
+              "tertiary": "string"
+            }
+          }
+        }
+      },
+    }]
 
     for match in matches:
-        #match = matchdict.to_dict()
-        metadata = match.metadata
-        winteam = "Blue"
-        if match.teams.red.has_won:
-            winteam = "Red"
-        print(metadata.map, metadata.game_start, metadata.matchid)
+        metadata = match["metadata"]
+        winteam = "blue"
+        if match["teams"]["red"]["has_won"]:
+            winteam = "red"
+        query = text("select map_id from Maps where map_name = :map").bindparams(map= metadata["map"])
+        mapp = request.app.state.db.execute(query).first()[0]
+        request.app.state.db.commit()
+        stmst = text("insert into Game(map_id, date_info, riot_id) values(:map, :game_start, :matchid)").bindparams(map= mapp,game_start = metadata["game_start"], matchid = metadata["matchid"])
+        request.app.state.db.execute(stmst)
+        query = text("select game_id from Game where riot_id =:id").bindparams(id=metadata["matchid"]) #maybe can get game id in same execution as insert?
+        result = request.app.state.db.execute(query)
+        game_id = result.first()[0]
+        print(f'gameid = {game_id}')
 
-        # stmst = (insert("Games") . values(map_id = (metadata.map, date_info =metadata.game_start, riot_game_id = metadata.matchid))
-        # request.app.state.db.execute(query)
-        # query = text("select game_id from Games where riot_game_id =:id").bindparams(id=metadata.matchid) #maybe can get game id in same execution as insert?
-        # result = request.app.state.db.execute(query)
-        # game_id = result.fetchone() 
+        query = text("select * from playerstats1 where game_id =:id and player_id = :playerid").bindparams(id=game_id, playerid=player_id)
+        if not request.app.state.db.execute(query).first():
+            #print(matchdict.players)
+            matchrounds = metadata["rounds_played"]
+            player_data = match["players"]["all_players"]
+            for player in player_data:
+                if player["tag"] == playertag and player["name"]== playerign:
+                    didwin = False
+                    if player["team"]== winteam:
+                        didwin = True
+                    shots = player["stats"]["bodyshots"] + player["stats"]["headshots"] + player["stats"]["legshots"]
+                    query = text("select agent_id from Agents where agent_name = :agent").bindparams(agent = player["character"])
+                    agent = request.app.state.db.execute(query).first()[0]
+                    stmst = text("insert into playerstats1(game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr ,:hr,:tid)").bindparams(gid=game_id,pid= player_id ,w=didwin ,aid=agent,acs=player["stats"]["score"]/matchrounds,k=player["stats"]["kills"],d=player["stats"]["deaths"],a=player["stats"]["assists"],adr = player["damage_made"]/matchrounds,hr=player["stats"]["headshots"]/shots,tid=player["currenttier"])
+                    request.app.state.db.execute(stmst)
+                    print("hi")
+                    request.app.state.db.commit()
+    query = text("select * from playerstats1 where game_id =:id and player_id = :playerid").bindparams(id=game_id, playerid=player_id)
+    print(request.app.state.db.execute(query).first())
+    return {}
 
-        #print(matchdict.players)
-        matchrounds = metadata.rounds_played
-        player_data = match.players.all_players
-        for player in player_data:
-            if player.tag == playertag and player.name == playerign:
-                didwin = False
-                if player.team == winteam:
-                    didwin = True
-                shots = player.stats.bodyshots + player.stats.headshots +player.stats.legshots
-                print(player.team, didwin, player.character, player.stats.score/matchrounds, player.stats.kills, player.stats.deaths, player.stats.assists, player.stats.headshots/shots, player.currenttier)
-                # insertrow = {"game_id" : 0
-                # ,"player_id" : player_id ,"team": player['team'],won,agent,_,average_combat_score,kills,deaths,assists,kills_deaths,headshot_ratio,first_kills,first_deaths,side,tier,_}
+    # valo_api.set_api_key(settings.henrik_api_key.get_secret_value())
+    # matches = await valo_api.get_match_history_by_name_v3_async(  # type: ignore
+    # "na", playerign, playertag, game_mode="competitive"
+    # )
+
+    # for match in matches:
+    #     metadata = match.metadata
+    #     winteam = "Blue"
+    #     if match.teams.red.has_won:
+    #         winteam = "Red"
+    #     print(metadata.map, metadata.game_start, metadata.matchid)
+
+    #     stmst = text("insert into Games(map_id, date_info, riot_id) values(:map, :game_start, :matchid)").bindparams(map= metadata.map,game_start = metadata.game_start, matchid = metadata.matchid)
+    #     request.app.state.db.execute(stmst)
+    #     query = text("select game_id from Games where riot_id =:id").bindparams(id=metadata.matchid) #maybe can get game id in same execution as insert?
+    #     result = request.app.state.db.execute(query)
+    #     game_id = result.fetchone() 
+
+    #     query = text("select * from Player_stats where game_id =:id and player_id = :playerid").bindparams(id=game_id, playerid=player_id)
+    #     if not request.app.state.db.execute(query):
+    #         #print(matchdict.players)
+    #         matchrounds = metadata.rounds_played
+    #         player_data = match.players.all_players
+    #         for player in player_data:
+    #             if player.tag == playertag and player.name == playerign:
+    #                 didwin = False
+    #                 if player.team == winteam:
+    #                     didwin = True
+    #                 shots = player.stats.bodyshots + player.stats.headshots + player.stats.legshots
+    #                 query = text("select agent_id from Player_Stats p left join Agents a on p.agent_id = a.agent_id where agent_name = :agent").bindparams(agent = player.character)
+    #                 agent = request.app.state.db.execute(query)
+    #                 stmst = text("insert into Player_Stats(game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)").bindparams(gid=game_id,pid= player_id ,w=didwin ,aid=agent ,acs=player.stats.score/matchrounds,k=player.stats.kills,d=player.stats.deaths,a=player.stats.assists,adr = player.damage_made/matchrounds,hr=player.stats.headshots/shots,tid=player.currenttier)
+    # query = text("select * from Player_stats where game_id =:id and player_id = :playerid").bindparams(id=game_id, playerid=player_id)
+    # print(request.app.state.db.execute(query))
     return {}
 
 #do trigger for this pls
