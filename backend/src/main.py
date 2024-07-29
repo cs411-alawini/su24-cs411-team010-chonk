@@ -306,19 +306,17 @@ def player_most_played_agent(
 
 @app.get("/agent_recommendations")
 def agent_recommendations(
+    map_name: str,
+    tier_id: int,
     request: Request,
-    # current_user: Annotated[User, Depends(get_current_user)],
 ):
-    # player_id = current_user.player_id
-    # TO-DO: probably use a dropdown or button to select map and rank
-
     query = text(
         "SELECT a.agent_name, z.win_rate FROM"
-        " (SELECT p.agent_id FROM Player_Stats p JOIN Game g ON p.game_id = g.game_id JOIN Maps m ON m.map_id = g.map_id WHERE m.map_name = 'Split' GROUP BY agent_id ORDER BY COUNT(agent_id) DESC LIMIT 5)"
+        " (SELECT p.agent_id FROM Player_Stats p JOIN Game g ON p.game_id = g.game_id JOIN Maps m ON m.map_id = g.map_id WHERE m.map_name = :map_name GROUP BY agent_id ORDER BY COUNT(agent_id) DESC LIMIT 5)"
         " AS y LEFT JOIN"
-        " (SELECT a.win_rate, a.agent_id FROM Agent_Stats a JOIN Maps m ON m.map_id = a.map_id WHERE m.map_name = 'Split' AND a.tier_id = 10)"
+        " (SELECT a.win_rate, a.agent_id FROM Agent_Stats a JOIN Maps m ON m.map_id = a.map_id WHERE m.map_name = :map_name AND a.tier_id = :tier_id)"
         " AS z ON y.agent_id = z.agent_id JOIN Agents a ON a.agent_id = y.agent_id ORDER BY z.win_rate DESC"
-    )
+    ).bindparams(map_name=map_name, tier_id=tier_id)
     with request.app.state.db.connect() as connection:
         result = connection.execute(query)
     recommendations = result.fetchall()
@@ -329,10 +327,7 @@ def agent_recommendations(
 @app.get("/top_agent_map")
 def top_agent_map(
     request: Request,
-    # current_user: Annotated[User, Depends(get_current_user)],
 ):
-    # player_id = current_user.player_id
-
     query = text(
         "SELECT m.map_name, a.agent_name, MAX(astats.acs) AS MaxACS"
         " FROM Agent_Stats astats JOIN Agents a ON astats.agent_id = a.agent_id JOIN Map_Stats mstats ON astats.map_id = mstats.map_id AND astats.tier_id = mstats.tier_id JOIN Maps m ON mstats.map_id = m.map_id"
@@ -342,16 +337,24 @@ def top_agent_map(
         result = connection.execute(query)
     top_agent_map = result.fetchall()
 
-    return {"top_agent_map": f"{top_agent_map}"}
+    results = {
+        map_name: [
+            {"agent_name": agent_name, "max_acs": max_acs}
+            for _, agent_name, max_acs in top_agent_map
+        ]
+        for map_name in set([map_name for map_name, _, _ in top_agent_map])
+    }
+
+    return results
 
 
 @app.get("/analyze_performance")
 def analyze_performance(
+    map_name: str,
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     player_id = current_user.player_id
-    map_name = "Split"  # TO DO: change to whatever frontend input isW
 
     call_procedure = text("CALL AnalyzePlayerPerformance(:player_id, :map_name)")
 
