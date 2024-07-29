@@ -151,9 +151,7 @@ async def update_user_data(request: Request, current_user: Annotated[User, Depen
     playertag = ign_tag[1]
 
     settings = get_settings()
-    if settings.henrik_api_key is None:
-        raise ValueError("henrik_api_key is required")
-    query = text("select * from playerstats1 where player_id = :playerid").bindparams(playerid=player_id)
+    query = text("select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1 where player_id = :playerid").bindparams(playerid=player_id)
     beforeupdate = list(request.app.state.db.execute(query))
 
     valo_api.set_api_key(settings.henrik_api_key.get_secret_value())
@@ -193,7 +191,7 @@ async def update_user_data(request: Request, current_user: Annotated[User, Depen
                     stmst = text("insert into  playerstats1 (game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)").bindparams(gid=game_id,pid= player_id ,w=didwin ,aid=agent ,acs=player.stats.score/matchrounds,k=player.stats.kills,d=player.stats.deaths,a=player.stats.assists,adr = player.damage_made/matchrounds,hr=player.stats.headshots/shots,tid=player.currenttier)
                     request.app.state.db.execute(stmst)
                     request.app.state.db.commit()
-    query = text("select * from playerstats1  where player_id = :playerid").bindparams(playerid=player_id)
+    query = text("select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1  where player_id = :playerid").bindparams(playerid=player_id)
     after = list(request.app.state.db.execute(query))
     print(beforeupdate, after)
     return {"hi"}
@@ -314,4 +312,6 @@ def player_most_played_agent(
         player_to_count[agent[0]] = agent[1]
     
     return {"player_most_played_agent": player_to_count}
+
+
 
