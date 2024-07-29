@@ -277,3 +277,96 @@ def top_agent_map(
     top_agent_map = result.fetchall()
 
     return {"top_agent_map": f"{top_agent_map}"}
+
+@app.get("/analyze_performance")
+def analyze_performance(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    map_name = 'Split' # TO DO: change to whatever frontend input isW
+
+    call_procedure = text("CALL AnalyzePlayerPerformance(:player_id, :map_name)")
+    result = request.app.state.db.execute(call_procedure, {'player_id': player_id, 'map_name': map_name})
+    analysis = result.fetchall()
+
+    return {"kowalski_analysis": f"{analysis}"}
+
+stored_procedure = """
+    DELIMITER //
+    CREATE PROCEDURE AnalyzePlayerPerformance(IN player_id VARCHAR(50), IN map_name VARCHAR(50))
+    BEGIN
+        DECLARE done INT DEFAULT 0;
+        DECLARE map_acs INT;
+        DECLARE map_kills INT;
+        DECLARE map_deaths INT;
+        DECLARE map_assists INT;
+        DECLARE map_matches INT;
+        DECLARE overall_acs INT;
+        DECLARE overall_kills INT;
+        DECLARE overall_deaths INT;
+        DECLARE overall_assists INT;
+        DECLARE overall_matches INT;
+        DECLARE map_acs_ratio FLOAT;
+        DECLARE map_kill_ratio FLOAT;
+        DECLARE map_death_ratio FLOAT;
+        DECLARE map_assist_ratio FLOAT;
+        DECLARE overall_acs_ratio FLOAT;
+        DECLARE overall_kill_ratio FLOAT;
+        DECLARE overall_death_ratio FLOAT;
+        DECLARE overall_assist_ratio FLOAT;
+
+        DECLARE map_cursor CURSOR FOR 
+            SELECT SUM(average_combat_score), SUM(kills), SUM(deaths), SUM(assists), COUNT(*)
+            FROM Player_Stats p
+            JOIN Game g ON p.game_id = g.game_id
+            JOIN Maps m ON g.map_id = m.map_id
+            WHERE p.player_id = player_id AND m.map_name = map_name;
+
+        DECLARE overall_cursor CURSOR FOR 
+            SELECT SUM(average_combat_score), SUM(kills), SUM(deaths), SUM(assists), COUNT(*)
+            FROM Player_Stats p
+            WHERE p.player_id = player_id;
+
+        DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+        OPEN map_cursor;
+        FETCH map_cursor INTO map_acs, map_kills, map_deaths, map_assists, map_matches;
+        CLOSE map_cursor;
+
+        OPEN overall_cursor;
+        FETCH overall_cursor INTO overall_acs, overall_kills, overall_deaths, overall_assists, overall_matches;
+        CLOSE overall_cursor;
+
+        IF map_matches > 0 THEN
+            SET map_acs_ratio = map_acs / map_matches;
+            SET map_kill_ratio = map_kills / map_matches;
+            SET map_death_ratio = map_deaths / map_matches;
+            SET map_assist_ratio = map_assists / map_matches;
+        ELSE
+            SET map_acs_ratio = 0;
+            SET map_kill_ratio = 0;
+            SET map_death_ratio = 0;
+            SET map_assist_ratio = 0;
+        END IF;
+
+        IF overall_matches > 0 THEN
+            SET overall_acs_ratio = overall_acs / overall_matches;
+            SET overall_kill_ratio = overall_kills / overall_matches;
+            SET overall_death_ratio = overall_deaths / overall_matches;
+            SET overall_assist_ratio = overall_assists / overall_matches;
+        ELSE
+            SET overall_acs_ratio = 0;
+            SET overall_kill_ratio = 0;
+            SET overall_death_ratio = 0;
+            SET overall_assist_ratio = 0;
+        END IF;
+
+        SELECT player_id, map_name, map_acs_ratio, map_kill_ratio, map_death_ratio, map_assist_ratio, map_matches, overall_acs_ratio, overall_kill_ratio, overall_death_ratio, overall_assist_ratio, overall_matches,
+            IF(map_acs_ratio > overall_acs_ratio, '↑', '↓') AS acs_comparison,
+            IF(map_kill_ratio > overall_kill_ratio, '↑', '↓') AS kill_comparison,
+            IF(map_death_ratio < overall_death_ratio, '↑', '↓') AS death_comparison,
+            IF(map_assist_ratio > overall_assist_ratio, '↑', '↓') AS assist_comparison;
+    END //
+    DELIMITER ;
+    """
