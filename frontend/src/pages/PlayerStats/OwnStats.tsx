@@ -180,6 +180,7 @@ const PlayerStats: React.FC = () => {
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [mostPlayedAgent, setMostPlayedAgent] = useState<String>("");
   const [mostPlayedMap, setMostPlayedMap] = useState<String>("");
+  const [proLookalike, setProLookalike] = useState<String>("");
   const [loading, setLoading] = useState<boolean>(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [modalData, setModalData] = useState<any[]>([]);
@@ -204,6 +205,11 @@ const PlayerStats: React.FC = () => {
       const agentResponse = await fetch(`${config.apiUrl}/most_played_agent`, {
         headers: { Authorization: "Bearer " + localStorage.token },
       });
+
+      const proResponse = await fetch(`${config.apiUrl}/pro_lookalike`, {
+        headers: { Authorization: "Bearer " + localStorage.token },
+      });
+
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
@@ -218,6 +224,10 @@ const PlayerStats: React.FC = () => {
       }
       const mapData = await mapResponse.json();
       setMostPlayedMap(mapData.most_played_map);
+    
+      // todo
+      const proData = await proResponse.json();
+      setProLookalike(proData.best_match);
 
       setStats(data);
     } catch (error) {
@@ -459,27 +469,17 @@ const PlayerStats: React.FC = () => {
                   </Stat>
                 </HStack>
 
-                {/* <HStack spacing={2}>
+                <HStack spacing={2}>
                   <Stat>
                     <StatLabel style={{ color: "white" }}>
-                      Defender Win Rate
+                      Pro Lookalike
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.defenderWinRate}%
+                      {proLookalike}
                     </StatNumber>
                   </Stat>
                 </HStack>
 
-                <HStack spacing={2}>
-                  <Stat>
-                    <StatLabel style={{ color: "white" }}>
-                      Attacker Win Rate
-                    </StatLabel>
-                    <StatNumber style={{ color: "white" }}>
-                      {stats.attackerWinRate}%
-                    </StatNumber>
-                  </Stat>
-                </HStack> */}
               </VStack>
             </HStack>
           </Box>
