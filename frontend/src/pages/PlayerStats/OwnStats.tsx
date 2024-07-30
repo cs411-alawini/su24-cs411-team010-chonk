@@ -246,7 +246,8 @@ const PlayerStats: React.FC = () => {
                 throw new Error("Network response was not ok");
             }
             const data = await response.json();
-            setModalData(data.monthly_stats);
+            setModalData(data);
+            console.log("monthly data: " + data)
         } catch (error) {
             console.error("Error fetching graph data:", error);
         }
@@ -343,7 +344,7 @@ const PlayerStats: React.FC = () => {
                       Avg Kills per Game
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgKillsPerGame}
+                      {stats.avgKillsPerGame.toFixed(2)}
                     </StatNumber>
                   </Stat>
                   <Button
@@ -364,7 +365,7 @@ const PlayerStats: React.FC = () => {
                       Avg Deaths per Game
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgDeathsPerGame}
+                      {stats.avgDeathsPerGame.toFixed(2)}
                     </StatNumber>
                   </Stat>
                   <Button
@@ -385,7 +386,7 @@ const PlayerStats: React.FC = () => {
                       Avg Assists per Game
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgAssistsPerGame}
+                      {stats.avgAssistsPerGame.toFixed(2)}
                     </StatNumber>
                   </Stat>
                   <Button
@@ -406,7 +407,7 @@ const PlayerStats: React.FC = () => {
                       Avg Combat Score per Game
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgCombatScorePerGame}
+                      {stats.avgCombatScorePerGame.toFixed(2)}
                     </StatNumber>
                   </Stat>
                   <Button
@@ -427,7 +428,7 @@ const PlayerStats: React.FC = () => {
                       Avg Head Shot Ratio
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgHeadShotRatio}
+                      {stats.avgHeadShotRatio.toFixed(2) + "%"}
                     </StatNumber>
                   </Stat>
                   <Button
@@ -448,7 +449,7 @@ const PlayerStats: React.FC = () => {
                       Avg First Bloods per Game
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgFirstBloodsPerGame}
+                      {stats.avgFirstBloodsPerGame.toFixed(2)}
                     </StatNumber>
                   </Stat>
                   <Button

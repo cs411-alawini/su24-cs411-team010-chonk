@@ -221,24 +221,24 @@ async def player_monthly_stats(
                 month
         """
     ).bindparams(player_id=player_id)
+
     with request.app.state.db.connect() as connection:
         result = connection.execute(query)
-        monthly_stats_data = result.fetchall()
-
-    monthly_stats = [
+    
+    player_stats_data = result.fetchall()
+    
+    return [
         {
-            "month": row.month.strftime("%b"),
-            "avgKillsPerGame": row.avgKillsPerGame,
-            "avgDeathsPerGame": row.avgDeathsPerGame,
-            "avgAssistsPerGame": row.avgAssistsPerGame,
-            "avgCombatScorePerGame": row.avgCombatScorePerGame,
-            "avgHeadShotRatio": row.avgHeadShotRatio,
-            "avgFirstBloodsPerGame": row.avgFirstBloodsPerGame,
+            "month": row.month,
+            "avgKillsPerGame": round(row.avgKillsPerGame, 2) if row.avgKillsPerGame is not None else None,
+            "avgDeathsPerGame": round(row.avgDeathsPerGame, 2) if row.avgDeathsPerGame is not None else None,
+            "avgAssistsPerGame": round(row.avgAssistsPerGame, 2) if row.avgAssistsPerGame is not None else None,
+            "avgCombatScorePerGame": round(row.avgCombatScorePerGame, 2) if row.avgCombatScorePerGame is not None else None,
+            "avgHeadShotRatio": round(row.avgHeadShotRatio, 2) if row.avgHeadShotRatio is not None else None,
+            "avgFirstBloodsPerGame": round(row.avgFirstBloodsPerGame, 2) if row.avgFirstBloodsPerGame is not None else None,
         }
-        for row in monthly_stats_data
+        for row in player_stats_data
     ]
-
-    return {"monthly_stats": monthly_stats}
 
 @app.get("/update_user_data")
 async def update_user_data(

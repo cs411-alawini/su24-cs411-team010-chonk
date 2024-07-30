@@ -34,6 +34,9 @@ charset-normalizer==3.3.2
 click==8.1.7
     # via typer
     # via uvicorn
+colorama==0.4.6
+    # via click
+    # via uvicorn
 dnspython==2.6.1
     # via email-validator
 email-validator==2.2.0
@@ -121,8 +124,6 @@ urllib3==2.2.2
     # via requests
 uvicorn==0.30.3
     # via fastapi
-uvloop==0.19.0
-    # via uvicorn
 valo-api==2.0.8
 watchfiles==0.22.0
     # via uvicorn
