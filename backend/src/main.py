@@ -217,6 +217,10 @@ async def update_user_data(
         "na", playerign, playertag, game_mode="competitive"
     )
 
+    request.app.state.db.execute(text("BEGIN TRANSACTION"))
+    request.app.state.db.execute(text("LOCK TABLES Game WRITE"))
+
+
     for match in matches:
         metadata = match.metadata
         winteam = "Blue"
@@ -246,6 +250,9 @@ async def update_user_data(
             # print(matchdict.players)
             matchrounds = metadata.rounds_played
             player_data = match.players.all_players
+
+            request.app.state.db.execute(text("LOCK TABLES playerstats1 WRITE"))
+
             for player in player_data:
                 if player.tag == playertag and player.name == playerign:
                     didwin = False
@@ -277,6 +284,11 @@ async def update_user_data(
                     )
                     request.app.state.db.execute(stmst)
                     request.app.state.db.commit()
+
+    request.app.state.db.execute(text("UNLOCK TABLES"))
+    request.app.state.db.execute(text("COMMIT"))
+
+
     query = text(
         "select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1  where player_id = :playerid"
     ).bindparams(playerid=player_id)

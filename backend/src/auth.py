@@ -48,12 +48,19 @@ def register_user(db, username: str, password: str):
     with db.connect() as connection:
         player_data = connection.execute(statement).fetchone()
 
+        connection.execute(text("BEGIN TRANSACTION"))
+
         if not player_data:
+
+            connection.execute(text("LOCK TABLES Player WRITE"))
+            
             statement = text(
                 "insert into Player (player_id, current_tier_id) values (:player_id, :current_tier_id)"
             ).bindparams(player_id=username, current_tier_id=3)
             connection.execute(statement)
             connection.commit()
+
+        connection.execute(text("LOCK TABLES User WRITE"))
 
         statement = text(
             "insert into User (username, player_id, password_hash) values (:username, :player_id, :password_hash)"
@@ -63,6 +70,10 @@ def register_user(db, username: str, password: str):
             password_hash=get_password_hash(password),
         )
         connection.execute(statement)
+        
+
+        connection.execute(text("UNLOCK TABLES"))
+        connection.execute(text("COMMIT"))
         connection.commit()
 
 
@@ -91,3 +102,17 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
         algorithm=settings.algorithm,
     )
     return encoded_jwt
+
+
+
+def delete_user(db, username: str, password: str):
+    user = get_user(db, username)
+    
+    if not user:
+        raise ValueError("user not found")
+
+    if not verify_password(password, user.password_hash):
+        raise ValueError("Incorrect Password") 
+
+    db.connect.execute(text("DELETE FROM User WHERE username = :uname").bindparams(uname = username))
+        
