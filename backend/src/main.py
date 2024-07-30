@@ -200,15 +200,16 @@ async def player_monthly_stats(
 ):
     player_id = current_user.player_id
     query = text(
-        "SELECT DATE_TRUNC('month', game_date) as month, "
-        "AVG(kills) as avgKillsPerGame, "
-        "AVG(deaths) as avgDeathsPerGame, "
-        "AVG(assists) as avgAssistsPerGame, "
-        "AVG(average_combat_score) as avgCombatScorePerGame, "
-        "AVG(headshot_ratio) as avgHeadShotRatio, "
-        "AVG(first_kills) as avgFirstBloodsPerGame "
-        "FROM Player_Stats "
-        "WHERE player_id = :player_id "
+        "SELECT DATE_FORMAT(STR_TO_DATE(g.date_info, '%Y-%m-%d %H:%i:%s'), '%Y-%m-01') AS month, "
+        "AVG(ps.kills) as avgKillsPerGame, "
+        "AVG(ps.deaths) as avgDeathsPerGame, "
+        "AVG(ps.assists) as avgAssistsPerGame, "
+        "AVG(ps.average_combat_score) as avgCombatScorePerGame, "
+        "AVG(ps.headshot_ratio) as avgHeadShotRatio, "
+        "AVG(ps.first_kills) as avgFirstBloodsPerGame "
+        "FROM Player_Stats ps "
+        "JOIN Game g ON ps.game_id = g.game_id "
+        "WHERE ps.player_id = :player_id "
         "GROUP BY month "
         "ORDER BY month"
     ).bindparams(player_id=player_id)
