@@ -206,6 +206,52 @@ async def player_stats(
         "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
     }
 
+@app.get("/player-monthly-stats")
+async def player_monthly_stats(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        """
+            SELECT 
+                DATE_FORMAT(STR_TO_DATE(g.date_info, '%Y-%m-%d %H:%i:%s'), '%Y-%m-01') AS month,
+                AVG(ps.kills) as avgKillsPerGame,
+                AVG(ps.deaths) as avgDeathsPerGame,
+                AVG(ps.assists) as avgAssistsPerGame,
+                AVG(ps.average_combat_score) as avgCombatScorePerGame,
+                AVG(ps.headshot_ratio) as avgHeadShotRatio,
+                AVG(ps.first_kills) as avgFirstBloodsPerGame
+            FROM 
+                Player_Stats ps
+            JOIN 
+                Game g ON ps.game_id = g.game_id
+            WHERE 
+                ps.player_id = :player_id
+            GROUP BY 
+                month
+            ORDER BY 
+                month
+        """
+    ).bindparams(player_id=player_id)
+
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    
+    player_stats_data = result.fetchall()
+    
+    return [
+        {
+            "month": row.month,
+            "avgKillsPerGame": round(row.avgKillsPerGame, 2) if row.avgKillsPerGame is not None else None,
+            "avgDeathsPerGame": round(row.avgDeathsPerGame, 2) if row.avgDeathsPerGame is not None else None,
+            "avgAssistsPerGame": round(row.avgAssistsPerGame, 2) if row.avgAssistsPerGame is not None else None,
+            "avgCombatScorePerGame": round(row.avgCombatScorePerGame, 2) if row.avgCombatScorePerGame is not None else None,
+            "avgHeadShotRatio": round(row.avgHeadShotRatio, 2) if row.avgHeadShotRatio is not None else None,
+            "avgFirstBloodsPerGame": round(row.avgFirstBloodsPerGame, 2) if row.avgFirstBloodsPerGame is not None else None,
+        }
+        for row in player_stats_data
+    ]
 
 @app.get("/update_user_data")
 async def update_user_data(
