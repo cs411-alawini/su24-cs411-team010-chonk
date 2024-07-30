@@ -139,6 +139,7 @@ const Lookup = () => {
     
             switch (lookupType) {
                 case 'agentSynergies':
+                    console.log('Fetching agentSynergies');
                     response = await fetch(`${config.apiUrl}/agent_synergies`, {
                         headers: { Authorization: `Bearer ${localStorage.token}` },
                     });
@@ -150,7 +151,7 @@ const Lookup = () => {
                     const parsedSynergies = synergiesString
                         .slice(1, -1) // Remove the square brackets
                         .split("), (") // Split by "), ("
-                        .map((item: string) => item.replace(/[\(\)'"]/g, "").trim()); // Remove parentheses, quotes, and trim spaces
+                        .map((item: string) => item.replace(/[\(\)'"]/g, "").trim().replace(/,$/, "")); // Remove parentheses, quotes, trim spaces, and trailing commas
 
                     console.log('Parsed Agent Synergies:', parsedSynergies); // Log the parsed data
 
@@ -158,15 +159,24 @@ const Lookup = () => {
                     break;
     
                 case 'mostPlayedAgent':
+                    console.log('Fetching mostPlayedAgent');
                     response = await fetch(`${config.apiUrl}/player_most_played_agent`, {
                         headers: { Authorization: `Bearer ${localStorage.token}` },
                     });
                     data = await response.json();
                     console.log('Most Played Agent Response:', data); // Log the response data
-                    setOutput(data.player_most_played_agent);
+                    // Manually parse the agent_synergies response
+                    const mostPlayedAgentString = data.player_most_played_agent;
+                    const parsedmostPlayedAgentString = mostPlayedAgentString
+                        .slice(1, -1) // Remove the square brackets
+                        .split("), (") // Split by "), ("
+                        .map((item: string) => item.replace(/[\(\)'"]/g, "").trim().replace(/,$/, "")); // Remove parentheses, quotes, trim spaces, and trailing commas
+
+                    setOutput(parsedmostPlayedAgentString);
                     break;
     
                 case 'agentRecommendations':
+                    console.log('Fetching agentRecommendations');
                     const { map, rank } = formData;
     
                     // Fetch recommendations for current map and rank
@@ -175,18 +185,33 @@ const Lookup = () => {
                     });
                     const mapRankData = await response.json();
                     console.log('Map Rank Recommendations Response:', mapRankData); // Log the response data
+                    // Manually parse the agent_synergies response
+                    const mapRankDataString = mapRankData.agent_recommendations;
+                    const parsedMapRankData = mapRankDataString
+                        .slice(1, -1) // Remove the square brackets
+                        .split("), (") // Split by "), ("
+                        .map((item: string) => item.replace(/[\(\)'"]/g, "").trim().replace(/,$/, "")); // Remove parentheses, quotes, trim spaces, and trailing commas
+
+                    setOutput(parsedMapRankData);
+                    break;
     
+                case 'topMapAgents':
+                    console.log('Fetching topMapAgentRecommendations');
                     // Fetch overall recommendations
                     const overallResponse = await fetch(`${config.apiUrl}/top_agent_map`, {
                         headers: { Authorization: `Bearer ${localStorage.token}` },
                     });
                     const overallData = await overallResponse.json();
                     console.log('Overall Recommendations Response:', overallData); // Log the response data
-    
-                    setOutput([
-                        { title: 'For Current Rank', data: mapRankData.agent_recommendations },
-                        { title: 'Overall', data: overallData  }
-                    ]);
+
+                    // Manually parse the agent_synergies response
+                    const overallResponseString = overallData;
+                    const parsedOverallResponse = overallResponseString
+                        .slice(1, -1) // Remove the square brackets
+                        .split("), (") // Split by "), ("
+                        .map((item: string) => item.replace(/[\(\)'"]/g, "").trim().replace(/,$/, "")); // Remove parentheses, quotes, trim spaces, and trailing commas
+
+                    setOutput(parsedOverallResponse);
                     break;
     
                 default:
