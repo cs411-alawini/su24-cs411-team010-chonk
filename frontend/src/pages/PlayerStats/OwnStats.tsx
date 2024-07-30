@@ -13,9 +13,9 @@ import {
   Image,
   Spacer,
 } from "@chakra-ui/react";
-import config from "./config";
+import config from "../../config.ts";
 import OwnStatsGraph from "./OwnStatsGraph.tsx";
-import ValoEmblem from "./assets/ValoEmblem.png";
+import ValoEmblem from "../../assets/ValoEmblem.png";
 import { Link as ReactRouterLink } from "react-router-dom";
 import { Link as ChakraLink } from "@chakra-ui/react";
 
