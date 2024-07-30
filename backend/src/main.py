@@ -285,26 +285,6 @@ async def update_user_data(
     return {"hi"}
 
 
-@app.get("/most_played_agent")
-def most_played_agent(
-    request: Request,
-    current_user: Annotated[User, Depends(get_current_user)],
-):
-    player_id = current_user.player_id
-    query = text(
-        "select agent_name as agent from Player_Stats p left join Agents a on p.agent_id = a.agent_id where player_id=:player_id group by p.agent_id order by count(p.agent_id) desc limit 1"
-    ).bindparams(player_id=player_id)
-    result = request.app.state.db.execute(query)
-    player_stats_data = result.fetchone()
-    return {
-        "avgKillsPerGame": player_stats_data.avgKillsPerGame,
-        "avgDeathsPerGame": player_stats_data.avgDeathsPerGame,
-        "avgAssistsPerGame": player_stats_data.avgAssistsPerGame,
-        "avgCombatScorePerGame": player_stats_data.avgCombatScorePerGame,
-        "avgHeadShotRatio": player_stats_data.avgHeadShotRatio,
-        "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
-    }
-
 
 @app.get("/most_played_agent")
 def most_played_agent(
