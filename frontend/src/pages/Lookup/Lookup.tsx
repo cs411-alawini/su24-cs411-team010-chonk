@@ -121,7 +121,7 @@ const Lookup = () => {
             let response;
             let data;
     
-            switch (lookupType) {
+            switch (type) {
                 case 'agentSynergies':
                     console.log('Fetching agentSynergies');
                     response = await fetch(`${config.apiUrl}/agent_synergies`, {
