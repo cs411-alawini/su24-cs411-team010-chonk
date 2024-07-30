@@ -44,6 +44,8 @@ fastapi-cli==0.0.4
 frozenlist==1.4.1
     # via aiohttp
     # via aiosignal
+greenlet==3.0.3
+    # via sqlalchemy
 h11==0.14.0
     # via httpcore
     # via uvicorn
@@ -93,7 +95,7 @@ pygments==2.18.0
     # via rich
 pyjwt==2.8.0
 pymysql==1.1.1
-pytest==8.3.1
+pytest==8.3.2
 python-dotenv==1.0.1
     # via pydantic-settings
     # via uvicorn
@@ -105,7 +107,7 @@ requests==2.32.3
     # via valo-api
 rich==13.7.1
     # via typer
-ruff==0.5.4
+ruff==0.5.5
 scipy==1.14.0
 shellingham==1.5.4
     # via typer
