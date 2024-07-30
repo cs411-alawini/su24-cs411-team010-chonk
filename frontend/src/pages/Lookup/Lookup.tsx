@@ -243,7 +243,7 @@ const Lookup = () => {
                                 style={{backgroundColor: "white", color: 'black'}}
                             >
                             {mapData.map((map) => (
-                                <option key={map.map_id} value={map.map_name} style={{color: 'black' }}>
+                                <option key={map.map_id} value={map.map_name} style={{backgroundColor: "white", color: 'black' }}>
                                 {map.map_name}
                                 </option>
                             ))}
@@ -257,7 +257,7 @@ const Lookup = () => {
                                 style={{backgroundColor: "white", color: 'black'}}
                             >
                             {rankData.map((rank) => (
-                                <option key={rank.tier_id} value={rank.tier_id} style={{color: 'black' }}>
+                                <option key={rank.tier_id} value={rank.tier_id} style={{backgroundColor: "white", color: 'black' }}>
                                 {rank.tier_name}
                                 </option>
                             ))}
