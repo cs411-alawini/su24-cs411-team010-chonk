@@ -12,18 +12,17 @@ interface OutputItem {
 
 
 const mapData = [
-    { map_id: 0, map_name: 'Icebox' },
-    { map_id: 1, map_name: 'Breeze' },
-    { map_id: 2, map_name: 'Haven' },
-    { map_id: 3, map_name: 'Bind' },
-    { map_id: 4, map_name: 'Split' },
-    { map_id: 5, map_name: 'Ascent' },
-    { map_id: 6, map_name: 'Sunset' },
-    { map_id: 7, map_name: 'Lotus' },
-    { map_id: 8, map_name: 'Breeze' },
-    { map_id: 9, map_name: 'Pearl' },
-    { map_id: 10, map_name: 'Fracture' },
-    { map_id: 11, map_name: 'Abyss' },
+    { map_id: 'Icebox', map_name: 'Icebox' },
+    { map_id: 'Breeze', map_name: 'Breeze' },
+    { map_id: 'Haven', map_name: 'Haven' },
+    { map_id: 'Bind', map_name: 'Bind' },
+    { map_id: 'Split', map_name: 'Split' },
+    { map_id: 'Ascent', map_name: 'Ascent' },
+    { map_id: 'Sunset', map_name: 'Sunset' },
+    { map_id: 'Lotus', map_name: 'Lotus' },
+    { map_id: 'Pearl', map_name: 'Pearl' },
+    { map_id: 'Fracture', map_name: 'Fracture' },
+    { map_id: 'Abyss', map_name: 'Abyss' },
 ];
 
 const agentData = [
@@ -118,44 +117,49 @@ const Lookup = () => {
         try {
             let response;
             let data;
-        
+    
             switch (lookupType) {
                 case 'agentSynergies':
                     response = await fetch(`${config.apiUrl}/agent_synergies`, {
                         headers: { Authorization: `Bearer ${localStorage.token}` },
                     });
                     data = await response.json();
+                    console.log('Agent Synergies Response:', data); // Log the response data
                     setOutput(data.agent_synergies);
                     break;
-        
+    
                 case 'mostPlayedAgent':
                     response = await fetch(`${config.apiUrl}/player_most_played_agent`, {
                         headers: { Authorization: `Bearer ${localStorage.token}` },
                     });
                     data = await response.json();
+                    console.log('Most Played Agent Response:', data); // Log the response data
                     setOutput(data.player_most_played_agent);
                     break;
-        
+    
                 case 'agentRecommendations':
                     const { map, rank } = formData;
+    
                     // Fetch recommendations for current map and rank
                     response = await fetch(`${config.apiUrl}/agent_recommendations?map_name=${map}&tier_id=${rank}`, {
                         headers: { Authorization: `Bearer ${localStorage.token}` },
                     });
                     const mapRankData = await response.json();
-
+                    console.log('Map Rank Recommendations Response:', mapRankData); // Log the response data
+    
                     // Fetch overall recommendations
                     const overallResponse = await fetch(`${config.apiUrl}/top_agent_map`, {
                         headers: { Authorization: `Bearer ${localStorage.token}` },
                     });
                     const overallData = await overallResponse.json();
-
+                    console.log('Overall Recommendations Response:', overallData); // Log the response data
+    
                     setOutput([
                         { title: 'For Current Rank', data: mapRankData.agent_recommendations },
                         { title: 'Overall', data: overallData  }
                     ]);
                     break;
-        
+    
                 default:
                     break;
             }
