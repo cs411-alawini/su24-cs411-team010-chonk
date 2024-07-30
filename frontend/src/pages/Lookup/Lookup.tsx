@@ -240,7 +240,7 @@ const Lookup = () => {
                                 name="map" 
                                 onChange={handleInputChange} 
                                 maxW = "200px"
-                                style={{backgroundColor: "white"}}
+                                style={{backgroundColor: "white", color: 'black'}}
                             >
                             {mapData.map((map) => (
                                 <option key={map.map_id} value={map.map_name} style={{color: 'black' }}>
@@ -254,7 +254,7 @@ const Lookup = () => {
                                 name="rank" 
                                 onChange={handleInputChange} 
                                 maxW = "200px"
-                                style={{backgroundColor: "white"}}
+                                style={{backgroundColor: "white", color: 'black'}}
                             >
                             {rankData.map((rank) => (
                                 <option key={rank.tier_id} value={rank.tier_id} style={{color: 'black' }}>
