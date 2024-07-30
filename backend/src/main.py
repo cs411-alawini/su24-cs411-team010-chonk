@@ -538,7 +538,20 @@ async def delete_user(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     player_id = current_user.player_id
-    request.app.state.db.connect.execute(text("DELETE FROM User WHERE username = :uname").bindparams(uname = username))
+    username = current_user.username
+
+    try:
+        with request.app.state.db.connect() as connection:
+            print("test")
+            result = connection.execute(text("DELETE FROM User WHERE username = :uname").bindparams(uname=username))
+            connection.commit()
+            print(result.rowcount)
+            if result.rowcount == 0:
+                raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"status": "success", "message": "User deleted successfully"}
 
 
 
