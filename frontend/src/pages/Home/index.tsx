@@ -172,6 +172,29 @@ const Home = (): React.ReactElement => {
     }
   };
 
+  const handleUpdateInfo = async (): Promise<void> => {
+    if (!loggedIn) {
+      return;
+    }
+
+    const response = await fetch(config.apiUrl + "/update_user_data", {
+      headers: { Authorization: "Bearer " + localStorage.token },
+    });
+
+    const data = await response.json();
+
+    if (data.success === true) {
+      window.location.reload();
+    } else {
+      toast({
+        title: "Update failed",
+        status: "error",
+        position: "top",
+        duration: 5000,
+      });
+    }
+  };
+
   const handleLogout = (): void => {
     localStorage.removeItem("token");
     setLoggedIn(false);
@@ -186,7 +209,7 @@ const Home = (): React.ReactElement => {
           <Spacer />
           {loggedIn ? (
             <HStack>
-              <Button onClick={handleLogout}>Refresh Data</Button>
+              <Button onClick={handleUpdateInfo}>Refresh Data</Button>
               <Button onClick={handleLogout}>Log Out</Button>
             </HStack>
           ) : null}
