@@ -241,8 +241,31 @@ const Home = (): React.ReactElement => {
     handleDelete();
   };
 
-  const handleDelete = (): void => {
+  const handleDelete = async (): Promise<void> => {
     console.log("Attempting to delete account");
+    
+    try {
+      const response = await fetch(`${config.apiUrl}/delete_user`, {
+        method: "POST",
+        headers: {"Authorization": `Bearer ${localStorage.token}`}
+      });
+      
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+  
+      const data = await response.json();
+      console.log("Delete account response:", data);
+  
+      if (data.status === "success") {
+        alert("Account deleted successfully.");
+      } else {
+        alert("Failed to delete account. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      alert("An error occurred while trying to delete the account. Please try again.");
+    }
   }
 
   return (
