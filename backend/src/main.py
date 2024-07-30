@@ -193,6 +193,43 @@ async def player_stats(
         "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
     }
 
+@app.get("/player-monthly-stats")
+async def player_monthly_stats(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT DATE_TRUNC('month', game_date) as month, "
+        "AVG(kills) as avgKillsPerGame, "
+        "AVG(deaths) as avgDeathsPerGame, "
+        "AVG(assists) as avgAssistsPerGame, "
+        "AVG(average_combat_score) as avgCombatScorePerGame, "
+        "AVG(headshot_ratio) as avgHeadShotRatio, "
+        "AVG(first_kills) as avgFirstBloodsPerGame "
+        "FROM Player_Stats "
+        "WHERE player_id = :player_id "
+        "GROUP BY month "
+        "ORDER BY month"
+    ).bindparams(player_id=player_id)
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+        monthly_stats_data = result.fetchall()
+
+    monthly_stats = [
+        {
+            "month": row.month.strftime("%b"),
+            "avgKillsPerGame": row.avgKillsPerGame,
+            "avgDeathsPerGame": row.avgDeathsPerGame,
+            "avgAssistsPerGame": row.avgAssistsPerGame,
+            "avgCombatScorePerGame": row.avgCombatScorePerGame,
+            "avgHeadShotRatio": row.avgHeadShotRatio,
+            "avgFirstBloodsPerGame": row.avgFirstBloodsPerGame,
+        }
+        for row in monthly_stats_data
+    ]
+
+    return {"monthly_stats": monthly_stats}
 
 @app.get("/update_user_data")
 async def update_user_data(
