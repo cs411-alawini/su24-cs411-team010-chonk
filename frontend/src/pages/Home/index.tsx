@@ -57,6 +57,7 @@ const Home = (): React.ReactElement => {
   const [riotId, setRiotId] = useState("");
   const [password, setPassword] = useState("");
   const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem("token"));
+  const [magic, setMagic] = useState([]);
   const [show, setShow] = useState(false);
   const [riotIdError, setRiotIdError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
@@ -119,6 +120,7 @@ const Home = (): React.ReactElement => {
   if (profileError || agentError || matchDataError) {
     localStorage.removeItem("token");
     setLoggedIn(false);
+    setMagic([]);
   }
 
   const toast = useToast();
@@ -195,9 +197,33 @@ const Home = (): React.ReactElement => {
     }
   };
 
+  const handleMagic = async (): Promise<void> => {
+    if (!loggedIn) {
+      return;
+    }
+
+    const response = await fetch(config.apiUrl + "/model_matches", {
+      headers: { Authorization: "Bearer " + localStorage.token },
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setMagic(data);
+    } else {
+      toast({
+        title: "Magic failed",
+        status: "error",
+        position: "top",
+        duration: 5000,
+      });
+    }
+  };
+
   const handleLogout = (): void => {
     localStorage.removeItem("token");
     setLoggedIn(false);
+    setMagic([]);
   };
 
   return (
@@ -320,8 +346,16 @@ const Home = (): React.ReactElement => {
         {loggedIn ? (
           <Skeleton isLoaded={!isFetchingMatchData && !isFetchingProfile}>
             <VStack align="unset" minWidth={"70vw"}>
-              <Heading size="md">Match History</Heading>
+              <HStack>
+                <Heading size="md">Match History</Heading>
+                <Spacer></Spacer>
+                <Button onClick={handleMagic}>Magic ✨</Button>
+              </HStack>
               <Spacer />
+              <Text>
+                Click the magic button to see your calculated win rate
+                percentage!
+              </Text>
 
               <TableContainer>
                 <Table variant="simple">
@@ -337,6 +371,7 @@ const Home = (): React.ReactElement => {
                       <Th>Headshot Ratio</Th>
                       <Th>First Kills</Th>
                       <Th>First Deaths</Th>
+                      {magic.length > 0 ? <Th>Magic</Th> : null}
                     </Tr>
                   </Thead>
                   <Tbody>
@@ -352,6 +387,9 @@ const Home = (): React.ReactElement => {
                         <Td>{match.headshot_ratio}%</Td>
                         <Td>{match.first_kills}</Td>
                         <Td>{match.first_deaths}</Td>
+                        {magic.length > 0 ? (
+                          <Td>{Number(magic[idx] * 100).toFixed(2)}%</Td>
+                        ) : null}
                       </Tr>
                     ))}
                   </Tbody>

@@ -1,9 +1,11 @@
+import pickle
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Annotated, Union
 
 import config
 import jwt
+import pandas as pd
 import scipy as sp
 import valo_api
 from auth import (
@@ -22,9 +24,20 @@ from sqlalchemy import text
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
+def replace_percentage(df, column):
+    df[column] = df[column].str.replace("%", "").astype(float)
+    return df
+
+
+import __main__  # noqa: E402
+
+__main__.replace_percentage = replace_percentage  # type: ignore
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.db = engine
+    app.state.model = pickle.load(open("model.pkl", "rb"))
     yield
     engine.dispose()
 
@@ -303,6 +316,7 @@ def most_played_agent(
     agent = most_played_user.agent
 
     return {"most_played_agent": f"{agent}"}
+
 
 @app.get("/most_played_map")
 def most_played_map(
@@ -591,3 +605,42 @@ async def matches(
 # END //
 
 # DELIMITER ;
+
+
+@app.get("/model_matches")
+async def model_matches(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT * from Player_Stats natural join Game natural join Maps natural join Agents where player_id=:player_id  order by game_id limit 5"
+    ).bindparams(player_id=player_id)
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    match_data = result.fetchall()
+
+    matches = [
+        {
+            "side": match.team_side,
+            "kill_assist_trade_survive_ratio": str(
+                match.kill_assist_trade_survive_ratio
+            ),
+            "tier": match.tier_id,
+            "kills_deaths": match.kills - match.deaths,
+            "agent": match.agent_id,
+            "average_damage_per_round": match.average_damage_per_round,
+            "kills": match.kills,
+            "deaths": match.deaths,
+            "assists": match.assists,
+            "average_combat_score": match.average_combat_score,
+            "headshot_ratio": str(match.headshot_ratio),
+            "first_kills": match.first_kills,
+            "first_deaths": match.first_deaths,
+        }
+        for match in match_data
+    ]
+
+    X = pd.DataFrame(matches)
+    predictions = request.app.state.model.predict_proba(X)
+    return [prediction[1] for prediction in predictions]
