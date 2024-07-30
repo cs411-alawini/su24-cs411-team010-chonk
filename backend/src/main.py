@@ -199,6 +199,7 @@ async def update_user_data(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
 ):
+    
     player_id = current_user.player_id
     if "#" not in player_id:
         return "Bad ign"
@@ -207,47 +208,55 @@ async def update_user_data(
     playertag = ign_tag[1]
 
     settings = get_settings()
-    query = text(
-        "select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1 where player_id = :playerid"
-    ).bindparams(playerid=player_id)
-    beforeupdate = list(request.app.state.db.execute(query))
-
     valo_api.set_api_key(settings.henrik_api_key.get_secret_value())
     matches = await valo_api.get_match_history_by_name_v3_async(  # type: ignore
         "na", playerign, playertag, game_mode="competitive"
     )
+    
+    with request.app.state.db.connect() as connection:
+        for match in matches:
+            metadata = match.metadata
+            #print(match.metadata)
+            query = text("select game_id from Game where riot_id =:id").bindparams(
+                id=metadata.matchid
+            )  
+            if connection.execute(query).first() == None and metadata.mode == "Competitive":
+                query = text("select map_id from Maps where map_name = :map").bindparams(
+                    map=metadata.map
+                )
+                #print(metadata.map)
+                mapp = connection.execute(query).first()[0]
 
-    for match in matches:
-        metadata = match.metadata
-        winteam = "Blue"
-        if match.teams.red.has_won:
-            winteam = "Red"
-        print(metadata.map, metadata.game_start, metadata.matchid)
-        query = text("select map_id from Maps where map_name = :map").bindparams(
-            map=metadata.map
-        )
-        mapp = request.app.state.db.execute(query).first()[0]
-        stmst = text(
-            "insert into Game(map_id, date_info, riot_id) values(:map, :game_start, :matchid)"
-        ).bindparams(map=mapp, game_start=metadata.game_start, matchid=metadata.matchid)
-        request.app.state.db.execute(stmst)
-        request.app.state.db.commit()
-        query = text("select game_id from Game where riot_id =:id").bindparams(
-            id=metadata.matchid
-        )  # maybe can get game id in same execution as insert?
-        result = request.app.state.db.execute(query)
-        game_id = result.first()[0]
-        print(f"gameid = {game_id}")
+                stmst = text(
+                    "insert into Game(map_id, date_info, riot_id) values(:map, :game_start, :matchid)"
+                ).bindparams(map=mapp, game_start=metadata.game_start, matchid=metadata.matchid)
+                connection.execute(stmst)
+                connection.commit()
 
-        query = text(
-            "select * from playerstats1  where game_id =:id and player_id = :playerid"
-        ).bindparams(id=game_id, playerid=player_id)
-        if not request.app.state.db.execute(query).first():
-            # print(matchdict.players)
-            matchrounds = metadata.rounds_played
-            player_data = match.players.all_players
-            for player in player_data:
-                if player.tag == playertag and player.name == playerign:
+                winteam = "Blue"
+                if match.teams.red.has_won:
+                    winteam = "Red"
+
+                query = text("select game_id from Game where riot_id =:id").bindparams(
+                id=metadata.matchid
+                )
+                game_id = connection.execute(query).first()[0]
+               
+                query = text("select game_id from Game where riot_id =:id").bindparams(
+                    id=metadata.matchid
+                )  
+                result = connection.execute(query)
+                game_id = result.first()[0]
+                
+                query = text(
+                "select game_id, player_id from Player_Stats where game_id = :game_id"
+                ).bindparams(game_id=game_id)
+                beforeupdate = list(connection.execute(query))
+
+                matchrounds = metadata.rounds_played
+                player_data = match.players.all_players
+                for player in player_data:
+                    player_id = f"{player.name}#{player.tag}"
                     didwin = False
                     if player.team == winteam:
                         didwin = True
@@ -259,13 +268,12 @@ async def update_user_data(
                     query = text(
                         "select agent_id from Agents where agent_name = :agent"
                     ).bindparams(agent=player.character)
-                    agent = request.app.state.db.execute(query).first()[0]
+                    agent = connection.execute(query).first()[0]
                     stmst = text(
-                        "insert into  playerstats1 (game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)"
+                        "insert into Player_Stats (game_id, player_id,agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)"
                     ).bindparams(
                         gid=game_id,
                         pid=player_id,
-                        w=didwin,
                         aid=agent,
                         acs=player.stats.score / matchrounds,
                         k=player.stats.kills,
@@ -275,15 +283,15 @@ async def update_user_data(
                         hr=player.stats.headshots / shots,
                         tid=player.currenttier,
                     )
-                    request.app.state.db.execute(stmst)
-                    request.app.state.db.commit()
-    query = text(
-        "select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1  where player_id = :playerid"
-    ).bindparams(playerid=player_id)
-    after = list(request.app.state.db.execute(query))
-    print(beforeupdate, after)
-    return {"hi"}
-
+                    connection.execute(stmst)
+                    connection.commit()
+                query = text("select game_id, player_id from Player_Stats where game_id = :game_id").bindparams(game_id=game_id)
+                after = list(connection.execute(query))
+                print("-------------before-------------")
+                print(beforeupdate)
+                print("-------------after-------------")
+                print(after)
+    return {"ok"}
 
 @app.get("/most_played_agent")
 def most_played_agent(
@@ -540,16 +548,15 @@ def analyze_performance(
 
 # DELIMITER //
 
-# CREATE TRIGGER userlogin BEFORE INSERT ON User
+# CREATE TRIGGER GAMEADD BEFORE INSERT ON Game
 # FOR EACH ROW
 # BEGIN
-#     DECLARE user_count INT;
-#     SELECT COUNT(*) INTO user_count
-#     FROM User
-#     WHERE username = NEW.username;
-#     IF user_count = 0 THEN
-#         INSERT INTO User (username, player_id, password_hash)
-#         VALUES (NEW.username, NEW.player_id, NEW.password_hash);
+#     DECLARE game_count INT;
+#     SELECT COUNT(*) INTO game_count
+#     FROM Game
+#     WHERE riot_id = NEW.riot_id;
+#     IF game_count != 0 THEN
+#         DELETE FROM GAME where riot_id = NEW.riot_id);
 #     END IF;
 # END //
 
