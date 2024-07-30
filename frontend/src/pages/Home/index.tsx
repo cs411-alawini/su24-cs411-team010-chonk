@@ -1,4 +1,4 @@
-import { BaseSyntheticEvent, useState } from "react";
+import { BaseSyntheticEvent, useState, useRef } from "react";
 import {
   InputGroup,
   Input,
@@ -29,6 +29,12 @@ import {
   createIcon,
   Divider,
   Skeleton,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
 } from "@chakra-ui/react";
 import { Link as ReactRouterLink } from "react-router-dom";
 import { Link as ChakraLink } from "@chakra-ui/react";
@@ -226,6 +232,19 @@ const Home = (): React.ReactElement => {
     setMagic([]);
   };
 
+  const [isOpen, setIsOpen] = useState(false);
+  const onClose = () => setIsOpen(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  
+  const handleDeleteConfirm = () => {
+    setIsOpen(false);
+    handleDelete();
+  };
+
+  const handleDelete = (): void => {
+    console.log("Attempting to delete account");
+  }
+
   return (
     <Flex minH={"100vh"} align={"center"} justify={"center"}>
       <VStack align="unset" spacing={8}>
@@ -236,6 +255,7 @@ const Home = (): React.ReactElement => {
           {loggedIn ? (
             <HStack>
               <Button onClick={handleUpdateInfo}>Refresh Data</Button>
+              <Button onClick={() => setIsOpen(true)}>Delete Account</Button>
               <Button onClick={handleLogout}>Log Out</Button>
             </HStack>
           ) : null}
@@ -436,6 +456,34 @@ const Home = (): React.ReactElement => {
             </TableContainer>
           </VStack>
         )}
+
+        <AlertDialog
+        isOpen={isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onClose}
+        >
+        <AlertDialogOverlay>
+            <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Delete Account
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+                Are you sure you want to delete your account? This action cannot be undone.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+                <Button ref={cancelRef} onClick={onClose}>
+                Cancel
+                </Button>
+                <Button colorScheme="red" onClick={handleDeleteConfirm} ml={3}>
+                Delete
+                </Button>
+            </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialogOverlay>
+        </AlertDialog>
+
       </VStack>
     </Flex>
   );
