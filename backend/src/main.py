@@ -229,9 +229,6 @@ async def update_user_data(
     return {"hi"}
 
 
-# do trigger for this pls
-
-
 @app.get("/most_played_agent")
 def most_played_agent(
     request: Request,
