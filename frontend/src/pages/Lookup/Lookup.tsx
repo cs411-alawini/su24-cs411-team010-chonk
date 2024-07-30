@@ -125,7 +125,12 @@ const Lookup = () => {
                     });
                     data = await response.json();
                     console.log('Agent Synergies Response:', data); // Log the response data
-                    setOutput(data.agent_synergies);
+                    
+                    // Parse the agent_synergies response
+                    const parsedSynergies = JSON.parse(data.agent_synergies.replace(/'/g, '"')).map((item) => item[0]);
+                    console.log('Parsed Agent Synergies:', parsedSynergies); // Log the parsed data
+    
+                    setOutput(parsedSynergies);
                     break;
     
                 case 'mostPlayedAgent':
@@ -264,26 +269,13 @@ const Lookup = () => {
                 </GridItem>
 
                 <GridItem>
-                    {lookupType === 'agentRecommendations' && Array.isArray(output) && typeof output[0] === 'object' ? (
-                        <HStack spacing={4} align="start">
-                        {(output as OutputItem[]).map((section, index) => (
-                            <Box key={index}>
-                            <Heading as="h3" size="md" style={{color: "white"}}>{section.title}</Heading>
-                            {section.data.map((item, idx) => (
-                                <Text key={idx} style={{color: "white"}}>{item}</Text>
-                            ))}
-                            </Box>
-                        ))}
-                        </HStack>
-                    ) : (
-                        <VStack spacing={4} align="start">
+                    <VStack spacing={4} align="start">
                         {Array.isArray(output) && typeof output[0] === 'string' && (
                             (output as string[]).map((item, index) => (
-                            <Text key={index} style={{color: "white"}}>{item}</Text>
+                            <Text key={index} style={{ color: "white" }}>{item}</Text>
                             ))
                         )}
-                        </VStack>
-                    )}
+                    </VStack>
                 </GridItem>
             </Grid>
         </Box>
