@@ -201,8 +201,12 @@ async def update_user_data(
 ):
     
     player_id = current_user.player_id
+
+    if not player_id:
+        return
+
     if "#" not in player_id:
-        return "Bad ign"
+        return {"success": False}
     ign_tag = player_id.split("#")
     playerign = ign_tag[0]
     playertag = ign_tag[1]
@@ -312,7 +316,6 @@ def most_played_agent(
 
     return {"most_played_agent": f"{agent}"}
 
-
 @app.get("/most_played_map")
 def most_played_map(
     request: Request,
@@ -344,14 +347,16 @@ def get_pro_lookalike(
     most_played_user = result.fetchone()
     agent = most_played_user.agent
     pro_query = text(
-        "SELECT player_id, avg(average_combat_score), avg(deaths),avg(assists),avg(kills_deaths) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where agent_id=:agent and tier_id = 21 group by player_id  order by count(agent_id) desc limit 100"
+        "SELECT player_id, avg(average_combat_score), avg(deaths),avg(assists) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where agent_id=:agent and tier_id = 21 group by player_id  order by count(agent_id) desc limit 100"
     ).bindparams(agent=agent)
-    pros = list(connection.execute(pro_query))
+    with request.app.state.db.connect() as connection:
+        pros = list(connection.execute(pro_query))
     pro_tree = sp.spatial.KDTree([x[1:] for x in pros])
     query = text(
-        "SELECT avg(average_combat_score), avg(deaths),avg(assists),avg(kills_deaths) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where player_id=:player_id group by player_id"
+        "SELECT avg(average_combat_score), avg(deaths),avg(assists) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where player_id=:player_id group by player_id"
     ).bindparams(player_id=player_id)
-    user_stats = list(connection.execute(query))
+    with request.app.state.db.connect() as connection:
+        user_stats = list(connection.execute(query))
     _, best_match = pro_tree.query(user_stats, k=1)
     return {"best_match": f"{pros[best_match[0]][0]}"}
 
@@ -428,11 +433,14 @@ def agent_recommendations(
 def top_agent_map(
     request: Request,
 ):
-    query = text(
-        "SELECT m.map_name, a.agent_name, MAX(astats.acs) AS MaxACS"
-        " FROM Agent_Stats astats JOIN Agents a ON astats.agent_id = a.agent_id JOIN Map_Stats mstats ON astats.map_id = mstats.map_id AND astats.tier_id = mstats.tier_id JOIN Maps m ON mstats.map_id = m.map_id"
-        " GROUP BY m.map_name, a.agent_name ORDER BY m.map_name, MaxACS DESC LIMIT 15"
-    )
+    query = text("""
+        SELECT m.map_name, a.agent_name, astats.acs AS MaxACS
+        FROM Agent_Stats astats JOIN Agents a ON astats.agent_id = a.agent_id JOIN Map_Stats mstats ON astats.map_id = mstats.map_id AND astats.tier_id = mstats.tier_id JOIN Maps m ON mstats.map_id = m.map_id
+         WHERE (astats.map_id, astats.acs) IN (
+            SELECT map_id, MAX(acs) FROM Agent_Stats GROUP BY map_id
+        )
+         ORDER BY m.map_name, MaxACS DESC
+    """)
     with request.app.state.db.connect() as connection:
         result = connection.execute(query)
     top_agent_map = result.fetchall()
@@ -545,6 +553,39 @@ def analyze_performance(
 #     END //
 #     DELIMITER ;
 #     """
+
+
+@app.get("/matches")
+async def matches(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT * from Player_Stats natural join Game natural join Maps natural join Agents where player_id=:player_id  order by game_id limit 5"
+    ).bindparams(player_id=player_id)
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    match_data = result.fetchall()
+
+    matches = [
+        {
+            "date_info": match.date_info,
+            "agent_name": match.agent_name,
+            "map_name": match.map_name,
+            "kills": match.kills,
+            "deaths": match.deaths,
+            "assists": match.assists,
+            "average_combat_score": match.average_combat_score,
+            "headshot_ratio": match.headshot_ratio,
+            "first_kills": match.first_kills,
+            "first_deaths": match.first_deaths,
+        }
+        for match in match_data
+    ]
+
+    return matches
+
 
 # DELIMITER //
 
