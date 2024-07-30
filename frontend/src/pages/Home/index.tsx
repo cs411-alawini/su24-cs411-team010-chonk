@@ -1,4 +1,4 @@
-import { BaseSyntheticEvent, useState, useRef } from "react";
+import { BaseSyntheticEvent, useState, MutableRefObject, useRef } from "react";
 import {
   InputGroup,
   Input,
@@ -208,7 +208,7 @@ const Home = (): React.ReactElement => {
 
   const [isOpen, setIsOpen] = useState(false);
   const onClose = () => setIsOpen(false);
-  const cancelRef = useRef();
+  const cancelRef = useRef<HTMLButtonElement>(null);
   
   const handleDeleteConfirm = () => {
     setIsOpen(false);
