@@ -174,8 +174,11 @@ const Lookup = () => {
                     const parsedMapRankData = mapRankDataString
                         .slice(1, -1) // Remove the square brackets
                         .split("), (") // Split by "), ("
-                        .map((item: string) => item.replace(/[\(\)'"]/g, "").trim().replace(/,$/, "")); // Remove parentheses, quotes, trim spaces, and trailing commas
-
+                        .map((item: string) => item.replace(/[\(\)'"]/g, "").trim().replace(/,$/, "")) // Remove parentheses, quotes, trim spaces, and trailing commas
+                        .map((item: string) => {
+                            const [agentName, winRate] = item.split(',').map(str => str.trim()); // Split by comma and trim spaces
+                            return `Agent: ${agentName}, Win Rate: ${winRate}%`; // Format the string
+                        });
                     setOutput(parsedMapRankData);
                     break;
     
@@ -190,7 +193,7 @@ const Lookup = () => {
 
                     // Parse and format the response data
                     const parsedOverallResponse = Object.keys(topMapData).flatMap((map) =>
-                        topMapData[map].map((agent: any) => `${agent.agent_name}, ACS: ${agent.max_acs}`)
+                        topMapData[map].map((agent: any) => `${map}: ${agent.agent_name}, ACS: ${agent.max_acs}`)
                     );
 
                     setOutput(parsedOverallResponse);
