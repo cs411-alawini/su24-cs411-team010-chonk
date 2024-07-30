@@ -10,6 +10,71 @@ interface OutputItem {
     data: string[];
 }
 
+
+const mapData = [
+    { map_id: 0, map_name: 'Icebox' },
+    { map_id: 1, map_name: 'Breeze' },
+    { map_id: 2, map_name: 'Haven' },
+    { map_id: 3, map_name: 'Bind' },
+    { map_id: 4, map_name: 'Split' },
+    { map_id: 5, map_name: 'Ascent' },
+    { map_id: 6, map_name: 'Sunset' },
+    { map_id: 7, map_name: 'Lotus' },
+    { map_id: 8, map_name: 'Breeze' },
+    { map_id: 9, map_name: 'Pearl' },
+    { map_id: 10, map_name: 'Fracture' },
+    { map_id: 11, map_name: 'Abyss' },
+];
+
+const agentData = [
+    { agent_id: 0, agent_name: 'Reyna' },
+    { agent_id: 1, agent_name: 'Sage' },
+    { agent_id: 2, agent_name: 'Sova' },
+    { agent_id: 3, agent_name: 'Jett' },
+    { agent_id: 4, agent_name: 'Raze' },
+    { agent_id: 5, agent_name: 'Killjoy' },
+    { agent_id: 6, agent_name: 'Yoru' },
+    { agent_id: 7, agent_name: 'Omen' },
+    { agent_id: 8, agent_name: 'Viper' },
+    { agent_id: 9, agent_name: 'Breach' },
+    { agent_id: 10, agent_name: 'Astra' },
+    { agent_id: 11, agent_name: 'Skye' },
+    { agent_id: 12, agent_name: 'Brimstone' },
+    { agent_id: 13, agent_name: 'Cypher' },
+    { agent_id: 14, agent_name: 'Phoenix' },
+    { agent_id: 15, agent_name: 'Kayo' },
+    { agent_id: 16, agent_name: 'Clove' },
+    { agent_id: 17, agent_name: 'Chamber' },
+    { agent_id: 18, agent_name: 'Neon' },
+    { agent_id: 19, agent_name: 'Harbor' },
+    { agent_id: 20, agent_name: 'Gekko' },
+    { agent_id: 21, agent_name: 'Fade' },
+    { agent_id: 22, agent_name: 'Iso' },
+    { agent_id: 23, agent_name: 'Deadlock' },
+];
+
+const rankData = [
+    { tier_id: 3, tier_name: 'Iron 1' },
+    { tier_id: 4, tier_name: 'Iron 2' },
+    { tier_id: 5, tier_name: 'Iron 3' },
+    { tier_id: 6, tier_name: 'Bronze 1' },
+    { tier_id: 7, tier_name: 'Bronze 2' },
+    { tier_id: 8, tier_name: 'Bronze 3' },
+    { tier_id: 9, tier_name: 'Silver 1' },
+    { tier_id: 10, tier_name: 'Silver 2' },
+    { tier_id: 11, tier_name: 'Silver 3' },
+    { tier_id: 12, tier_name: 'Gold 1' },
+    { tier_id: 13, tier_name: 'Gold 2' },
+    { tier_id: 14, tier_name: 'Gold 3' },
+    { tier_id: 15, tier_name: 'Platinum 1' },
+    { tier_id: 16, tier_name: 'Platinum 2' },
+    { tier_id: 17, tier_name: 'Platinum 3' },
+    { tier_id: 18, tier_name: 'Diamond 1' },
+    { tier_id: 19, tier_name: 'Diamond 2' },
+    { tier_id: 20, tier_name: 'Diamond 3' },
+    { tier_id: 21, tier_name: 'Pro' },
+];
+
 const Lookup = () => {
     const [lookupType, setLookupType] = useState<LookupType>('agentSynergies');
     const [formData, setFormData] = useState<{ [key: string]: string }>({});
@@ -84,7 +149,7 @@ const Lookup = () => {
                         headers: { Authorization: `Bearer ${localStorage.token}` },
                     });
                     const overallData = await overallResponse.json();
-                    
+
                     setOutput([
                         { title: 'For Current Rank', data: mapRankData.agent_recommendations },
                         { title: 'Overall', data: overallData  }
@@ -133,8 +198,11 @@ const Lookup = () => {
                                 maxW = "200px"
                                 style={{backgroundColor: "white"}}
                             >
-                            <option value="agent1">Agent 1</option>
-                            <option value="agent2">Agent 2</option>
+                            {agentData.map((agent) => (
+                                <option key={agent.agent_id} value={agent.agent_id} style={{ backgroundColor: '#2D3748', color: 'white' }}>
+                                {agent.agent_name}
+                                </option>
+                            ))}
                             {/* Add more options as needed */}
                             </Select>
                             <Button variant="valoRed" onClick={handleLookup}>Enter</Button>
@@ -163,8 +231,11 @@ const Lookup = () => {
                                 maxW = "200px"
                                 style={{backgroundColor: "white"}}
                             >
-                            <option value="map1">Map 1</option>
-                            <option value="map2">Map 2</option>
+                            {mapData.map((map) => (
+                                <option key={map.map_id} value={map.map_name} style={{ backgroundColor: '#2D3748', color: 'white' }}>
+                                {map.map_name}
+                                </option>
+                            ))}
                             {/* Add more options as needed */}
                             </Select>
                             <Select 
@@ -174,8 +245,11 @@ const Lookup = () => {
                                 maxW = "200px"
                                 style={{backgroundColor: "white"}}
                             >
-                            <option value="rank1">Rank 1</option>
-                            <option value="rank2">Rank 2</option>
+                            {rankData.map((rank) => (
+                                <option key={rank.tier_id} value={rank.tier_id} style={{ backgroundColor: '#2D3748', color: 'white' }}>
+                                {rank.tier_name}
+                                </option>
+                            ))}
                             {/* Add more options as needed */}
                             </Select>
                             <Button variant="valoRed" onClick={handleLookup}>Enter</Button>
