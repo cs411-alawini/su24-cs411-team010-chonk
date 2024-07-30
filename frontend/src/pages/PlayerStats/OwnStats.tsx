@@ -287,7 +287,7 @@ const PlayerStats: React.FC = () => {
           </Heading>
           <Spacer />
           <ChakraLink as={ReactRouterLink} to="/lookup">
-            <Button>Go Back</Button>
+            <Button>Lookup</Button>
           </ChakraLink>
           <ChakraLink as={ReactRouterLink} to="/">
             <Button>Go Back</Button>
