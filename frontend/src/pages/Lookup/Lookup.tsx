@@ -73,7 +73,6 @@ const rankData = [
     { tier_id: 18, tier_name: 'Diamond 1' },
     { tier_id: 19, tier_name: 'Diamond 2' },
     { tier_id: 20, tier_name: 'Diamond 3' },
-    { tier_id: 21, tier_name: 'Pro' },
 ];
 
 const Lookup = () => {

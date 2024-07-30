@@ -186,7 +186,7 @@ const Home = (): React.ReactElement => {
     }
 
     const response = await fetch(config.apiUrl + "/update_user_data", {
-      headers: { Authorization: "Bearer " + localStorage.token },
+      headers: { Authorization: "Bearer " + localStorage.token ,method: "POST"},
     });
 
     const data = await response.json();

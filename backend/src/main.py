@@ -476,10 +476,10 @@ def agent_recommendations(
     request: Request,
 ):
     query = text(
-        "SELECT a.agent_name, z.win_rate FROM"
+        "SELECT z.agent_name, z.win_rate FROM"
         " (SELECT p.agent_id FROM Player_Stats p JOIN Game g ON p.game_id = g.game_id JOIN Maps m ON m.map_id = g.map_id WHERE m.map_name = :map_name GROUP BY agent_id ORDER BY COUNT(agent_id) DESC LIMIT 5)"
         " AS y LEFT JOIN"
-        " (SELECT a.win_rate, a.agent_id FROM Agent_Stats a JOIN Maps m ON m.map_id = a.map_id WHERE m.map_name = :map_name AND a.tier_id = :tier_id)"
+        " (SELECT a.win_rate, a.agent_id, ag.agent_name FROM Agent_Stats a JOIN Maps m ON m.map_id = a.map_id left join Agents ag on ag.agent_id = a.agent_id WHERE m.map_name = :map_name AND a.tier_id = :tier_id)"
         " AS z ON y.agent_id = z.agent_id JOIN Agents a ON a.agent_id = y.agent_id ORDER BY z.win_rate DESC"
     ).bindparams(map_name=map_name, tier_id=tier_id)
     with request.app.state.db.connect() as connection:
@@ -557,8 +557,75 @@ async def delete_user(
     return {"status": "success", "message": "User deleted successfully"}
 
 
+@app.get("/matches")
+async def matches(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT * from Player_Stats natural join Game natural join Maps natural join Agents where player_id=:player_id  order by game_id limit 5"
+    ).bindparams(player_id=player_id)
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    match_data = result.fetchall()
+
+    matches = [
+        {
+            "date_info": match.date_info,
+            "agent_name": match.agent_name,
+            "map_name": match.map_name,
+            "kills": match.kills,
+            "deaths": match.deaths,
+            "assists": match.assists,
+            "average_combat_score": match.average_combat_score,
+            "headshot_ratio": match.headshot_ratio,
+            "first_kills": match.first_kills,
+            "first_deaths": match.first_deaths,
+        }
+        for match in match_data
+    ]
+
+    return matches
 
 
+@app.get("/model_matches")
+async def model_matches(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT * from Player_Stats natural join Game natural join Maps natural join Agents where player_id=:player_id  order by game_id limit 5"
+    ).bindparams(player_id=player_id)
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    match_data = result.fetchall()
+
+    matches = [
+        {
+            "side": match.team_side,
+            "kill_assist_trade_survive_ratio": str(
+                match.kill_assist_trade_survive_ratio
+            ),
+            "tier": match.tier_id,
+            "kills_deaths": match.kills - match.deaths,
+            "agent": match.agent_id,
+            "average_damage_per_round": match.average_damage_per_round,
+            "kills": match.kills,
+            "deaths": match.deaths,
+            "assists": match.assists,
+            "average_combat_score": match.average_combat_score,
+            "headshot_ratio": str(match.headshot_ratio),
+            "first_kills": match.first_kills,
+            "first_deaths": match.first_deaths,
+        }
+        for match in match_data
+    ]
+
+    X = pd.DataFrame(matches)
+    predictions = request.app.state.model.predict_proba(X)
+    return [prediction[1] for prediction in predictions]
 
 
 # stored_procedure = """
@@ -655,72 +722,3 @@ async def delete_user(
 
 # DELIMITER;
 
-@app.get("/matches")
-async def matches(
-    request: Request,
-    current_user: Annotated[User, Depends(get_current_user)],
-):
-    player_id = current_user.player_id
-    query = text(
-        "SELECT * from Player_Stats natural join Game natural join Maps natural join Agents where player_id=:player_id  order by game_id limit 5"
-    ).bindparams(player_id=player_id)
-    with request.app.state.db.connect() as connection:
-        result = connection.execute(query)
-    match_data = result.fetchall()
-
-    matches = [
-        {
-            "date_info": match.date_info,
-            "agent_name": match.agent_name,
-            "map_name": match.map_name,
-            "kills": match.kills,
-            "deaths": match.deaths,
-            "assists": match.assists,
-            "average_combat_score": match.average_combat_score,
-            "headshot_ratio": match.headshot_ratio,
-            "first_kills": match.first_kills,
-            "first_deaths": match.first_deaths,
-        }
-        for match in match_data
-    ]
-
-    return matches
-
-
-@app.get("/model_matches")
-async def model_matches(
-    request: Request,
-    current_user: Annotated[User, Depends(get_current_user)],
-):
-    player_id = current_user.player_id
-    query = text(
-        "SELECT * from Player_Stats natural join Game natural join Maps natural join Agents where player_id=:player_id  order by game_id limit 5"
-    ).bindparams(player_id=player_id)
-    with request.app.state.db.connect() as connection:
-        result = connection.execute(query)
-    match_data = result.fetchall()
-
-    matches = [
-        {
-            "side": match.team_side,
-            "kill_assist_trade_survive_ratio": str(
-                match.kill_assist_trade_survive_ratio
-            ),
-            "tier": match.tier_id,
-            "kills_deaths": match.kills - match.deaths,
-            "agent": match.agent_id,
-            "average_damage_per_round": match.average_damage_per_round,
-            "kills": match.kills,
-            "deaths": match.deaths,
-            "assists": match.assists,
-            "average_combat_score": match.average_combat_score,
-            "headshot_ratio": str(match.headshot_ratio),
-            "first_kills": match.first_kills,
-            "first_deaths": match.first_deaths,
-        }
-        for match in match_data
-    ]
-
-    X = pd.DataFrame(matches)
-    predictions = request.app.state.model.predict_proba(X)
-    return [prediction[1] for prediction in predictions]
