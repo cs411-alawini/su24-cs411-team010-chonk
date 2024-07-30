@@ -85,18 +85,18 @@ const Lookup = () => {
         setOutput([]);
         switch (lookupType) {
             case 'agentSynergies':
-                handleLookup;
+                handleLookup();
                 break;
 
             case 'mostPlayedAgent':
-                handleLookup;
+                handleLookup();
                 break;
 
             case 'agentRecommendations':
                 break;
             
             case  'topMapAgents':
-                handleLookup;
+                handleLookup();
                 break;
 
             default:
