@@ -83,24 +83,8 @@ const Lookup = () => {
         setLookupType(type);
         setFormData({});
         setOutput([]);
-        switch (lookupType) {
-            case 'agentSynergies':
-                handleLookup();
-                break;
-
-            case 'mostPlayedAgent':
-                handleLookup();
-                break;
-
-            case 'agentRecommendations':
-                break;
-            
-            case  'topMapAgents':
-                handleLookup();
-                break;
-
-            default:
-                break;
+        if (type !== 'agentRecommendations') {
+            handleLookup();
         }
     };
 
@@ -198,18 +182,16 @@ const Lookup = () => {
                 case 'topMapAgents':
                     console.log('Fetching topMapAgentRecommendations');
                     // Fetch overall recommendations
-                    const overallResponse = await fetch(`${config.apiUrl}/top_agent_map`, {
+                    const topMapResponse = await fetch(`${config.apiUrl}/top_agent_map`, {
                         headers: { Authorization: `Bearer ${localStorage.token}` },
                     });
-                    const overallData = await overallResponse.json();
-                    console.log('Overall Recommendations Response:', overallData); // Log the response data
+                    const topMapData = await topMapResponse.json();
+                    console.log('Overall Recommendations Response:', topMapData); // Log the response data    
 
-                    // Manually parse the agent_synergies response
-                    const overallResponseString = overallData;
-                    const parsedOverallResponse = overallResponseString
-                        .slice(1, -1) // Remove the square brackets
-                        .split("), (") // Split by "), ("
-                        .map((item: string) => item.replace(/[\(\)'"]/g, "").trim().replace(/,$/, "")); // Remove parentheses, quotes, trim spaces, and trailing commas
+                    // Parse and format the response data
+                    const parsedOverallResponse = Object.keys(topMapData).flatMap((map) =>
+                        topMapData[map].map((agent: any) => `${agent.agent_name}, ACS: ${agent.max_acs}`)
+                    );
 
                     setOutput(parsedOverallResponse);
                     break;
