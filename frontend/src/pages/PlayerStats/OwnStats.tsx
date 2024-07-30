@@ -34,7 +34,7 @@ interface PlayerStats {
   defenderWinRate: number;
   attackerWinRate: number;
 }
-
+//dsaasd
 // Mock data for different time spans
 // const mockStats = {
 //   overall: {
@@ -100,86 +100,87 @@ interface PlayerStats {
 // };
 
 // Mock monthly data for graphing
-const mockMonthlyData = [
-  {
-    month: "Jan",
-    avgKillsPerGame: 12,
-    avgDeathsPerGame: 6,
-    avgAssistsPerGame: 4,
-  },
-  {
-    month: "Feb",
-    avgKillsPerGame: 15,
-    avgDeathsPerGame: 8,
-    avgAssistsPerGame: 5,
-  },
-  {
-    month: "Mar",
-    avgKillsPerGame: 17,
-    avgDeathsPerGame: 7,
-    avgAssistsPerGame: 6,
-  },
-  {
-    month: "Apr",
-    avgKillsPerGame: 14,
-    avgDeathsPerGame: 9,
-    avgAssistsPerGame: 5,
-  },
-  {
-    month: "May",
-    avgKillsPerGame: 16,
-    avgDeathsPerGame: 8,
-    avgAssistsPerGame: 6,
-  },
-  {
-    month: "Jun",
-    avgKillsPerGame: 18,
-    avgDeathsPerGame: 7,
-    avgAssistsPerGame: 7,
-  },
-  {
-    month: "Jul",
-    avgKillsPerGame: 20,
-    avgDeathsPerGame: 9,
-    avgAssistsPerGame: 8,
-  },
-  {
-    month: "Aug",
-    avgKillsPerGame: 15,
-    avgDeathsPerGame: 8,
-    avgAssistsPerGame: 5,
-  },
-  {
-    month: "Sep",
-    avgKillsPerGame: 19,
-    avgDeathsPerGame: 9,
-    avgAssistsPerGame: 7,
-  },
-  {
-    month: "Oct",
-    avgKillsPerGame: 21,
-    avgDeathsPerGame: 10,
-    avgAssistsPerGame: 9,
-  },
-  {
-    month: "Nov",
-    avgKillsPerGame: 22,
-    avgDeathsPerGame: 11,
-    avgAssistsPerGame: 10,
-  },
-  {
-    month: "Dec",
-    avgKillsPerGame: 24,
-    avgDeathsPerGame: 12,
-    avgAssistsPerGame: 11,
-  },
-];
+// const mockMonthlyData = [
+//   {
+//     month: "Jan",
+//     avgKillsPerGame: 12,
+//     avgDeathsPerGame: 6,
+//     avgAssistsPerGame: 4,
+//   },
+//   {
+//     month: "Feb",
+//     avgKillsPerGame: 15,
+//     avgDeathsPerGame: 8,
+//     avgAssistsPerGame: 5,
+//   },
+//   {
+//     month: "Mar",
+//     avgKillsPerGame: 17,
+//     avgDeathsPerGame: 7,
+//     avgAssistsPerGame: 6,
+//   },
+//   {
+//     month: "Apr",
+//     avgKillsPerGame: 14,
+//     avgDeathsPerGame: 9,
+//     avgAssistsPerGame: 5,
+//   },
+//   {
+//     month: "May",
+//     avgKillsPerGame: 16,
+//     avgDeathsPerGame: 8,
+//     avgAssistsPerGame: 6,
+//   },
+//   {
+//     month: "Jun",
+//     avgKillsPerGame: 18,
+//     avgDeathsPerGame: 7,
+//     avgAssistsPerGame: 7,
+//   },
+//   {
+//     month: "Jul",
+//     avgKillsPerGame: 20,
+//     avgDeathsPerGame: 9,
+//     avgAssistsPerGame: 8,
+//   },
+//   {
+//     month: "Aug",
+//     avgKillsPerGame: 15,
+//     avgDeathsPerGame: 8,
+//     avgAssistsPerGame: 5,
+//   },
+//   {
+//     month: "Sep",
+//     avgKillsPerGame: 19,
+//     avgDeathsPerGame: 9,
+//     avgAssistsPerGame: 7,
+//   },
+//   {
+//     month: "Oct",
+//     avgKillsPerGame: 21,
+//     avgDeathsPerGame: 10,
+//     avgAssistsPerGame: 9,
+//   },
+//   {
+//     month: "Nov",
+//     avgKillsPerGame: 22,
+//     avgDeathsPerGame: 11,
+//     avgAssistsPerGame: 10,
+//   },
+//   {
+//     month: "Dec",
+//     avgKillsPerGame: 24,
+//     avgDeathsPerGame: 12,
+//     avgAssistsPerGame: 11,
+//   },
+// ];
 
 const PlayerStats: React.FC = () => {
   const [timeSpan, setTimeSpan] = useState<String>("overall");
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [mostPlayedAgent, setMostPlayedAgent] = useState<String>("");
   const [mostPlayedMap, setMostPlayedMap] = useState<String>("");
+  const [proLookalike, setProLookalike] = useState<String>("");
   const [loading, setLoading] = useState<boolean>(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [modalData, setModalData] = useState<any[]>([]);
@@ -204,6 +205,11 @@ const PlayerStats: React.FC = () => {
       const agentResponse = await fetch(`${config.apiUrl}/most_played_agent`, {
         headers: { Authorization: "Bearer " + localStorage.token },
       });
+
+      const proResponse = await fetch(`${config.apiUrl}/pro_lookalike`, {
+        headers: { Authorization: "Bearer " + localStorage.token },
+      });
+
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
@@ -218,6 +224,10 @@ const PlayerStats: React.FC = () => {
       }
       const mapData = await mapResponse.json();
       setMostPlayedMap(mapData.most_played_map);
+    
+      // todo
+      const proData = await proResponse.json();
+      setProLookalike(proData.best_match);
 
       setStats(data);
     } catch (error) {
@@ -226,6 +236,22 @@ const PlayerStats: React.FC = () => {
       setLoading(false);
     }
   };
+
+    const fetchGraphData = async () => {
+        try {
+            const response = await fetch(`${config.apiUrl}/player-monthly-stats`, {
+                headers: { Authorization: "Bearer " + localStorage.token },
+            });
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            const data = await response.json();
+            setModalData(data);
+            console.log("monthly data: " + data)
+        } catch (error) {
+            console.error("Error fetching graph data:", error);
+        }
+    };
 
   useEffect(() => {
     // if (mockStats[timeSpan]) {
@@ -237,7 +263,7 @@ const PlayerStats: React.FC = () => {
   }, [timeSpan]);
 
   const handleGraphOpen = (dataKey: string, title: string) => {
-    setModalData(mockMonthlyData);
+    fetchGraphData(); // Fetch the graph data when opening the graph modal
     setModalTitle(title);
     setModalDataKey(dataKey);
     onOpen();
@@ -276,6 +302,9 @@ const PlayerStats: React.FC = () => {
             Player Stats
           </Heading>
           <Spacer />
+          <ChakraLink as={ReactRouterLink} to="/lookup">
+            <Button>Lookup</Button>
+          </ChakraLink>
           <ChakraLink as={ReactRouterLink} to="/">
             <Button>Go Back</Button>
           </ChakraLink>
@@ -315,7 +344,7 @@ const PlayerStats: React.FC = () => {
                       Avg Kills per Game
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgKillsPerGame}
+                      {stats.avgKillsPerGame.toFixed(2)}
                     </StatNumber>
                   </Stat>
                   <Button
@@ -336,7 +365,7 @@ const PlayerStats: React.FC = () => {
                       Avg Deaths per Game
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgDeathsPerGame}
+                      {stats.avgDeathsPerGame.toFixed(2)}
                     </StatNumber>
                   </Stat>
                   <Button
@@ -357,7 +386,7 @@ const PlayerStats: React.FC = () => {
                       Avg Assists per Game
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgAssistsPerGame}
+                      {stats.avgAssistsPerGame.toFixed(2)}
                     </StatNumber>
                   </Stat>
                   <Button
@@ -378,7 +407,7 @@ const PlayerStats: React.FC = () => {
                       Avg Combat Score per Game
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgCombatScorePerGame}
+                      {stats.avgCombatScorePerGame.toFixed(2)}
                     </StatNumber>
                   </Stat>
                   <Button
@@ -399,7 +428,7 @@ const PlayerStats: React.FC = () => {
                       Avg Head Shot Ratio
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgHeadShotRatio}
+                      {stats.avgHeadShotRatio.toFixed(2) + "%"}
                     </StatNumber>
                   </Stat>
                   <Button
@@ -420,7 +449,7 @@ const PlayerStats: React.FC = () => {
                       Avg First Bloods per Game
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.avgFirstBloodsPerGame}
+                      {stats.avgFirstBloodsPerGame.toFixed(2)}
                     </StatNumber>
                   </Stat>
                   <Button
@@ -459,27 +488,17 @@ const PlayerStats: React.FC = () => {
                   </Stat>
                 </HStack>
 
-                {/* <HStack spacing={2}>
+                <HStack spacing={2}>
                   <Stat>
                     <StatLabel style={{ color: "white" }}>
-                      Defender Win Rate
+                      Pro Lookalike
                     </StatLabel>
                     <StatNumber style={{ color: "white" }}>
-                      {stats.defenderWinRate}%
+                      {proLookalike}
                     </StatNumber>
                   </Stat>
                 </HStack>
 
-                <HStack spacing={2}>
-                  <Stat>
-                    <StatLabel style={{ color: "white" }}>
-                      Attacker Win Rate
-                    </StatLabel>
-                    <StatNumber style={{ color: "white" }}>
-                      {stats.attackerWinRate}%
-                    </StatNumber>
-                  </Stat>
-                </HStack> */}
               </VStack>
             </HStack>
           </Box>

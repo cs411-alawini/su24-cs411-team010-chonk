@@ -1,4 +1,4 @@
-import { BaseSyntheticEvent, useState } from "react";
+import { BaseSyntheticEvent, useState, useRef } from "react";
 import {
   InputGroup,
   Input,
@@ -29,6 +29,12 @@ import {
   createIcon,
   Divider,
   Skeleton,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
 } from "@chakra-ui/react";
 import { Link as ReactRouterLink } from "react-router-dom";
 import { Link as ChakraLink } from "@chakra-ui/react";
@@ -57,6 +63,7 @@ const Home = (): React.ReactElement => {
   const [riotId, setRiotId] = useState("");
   const [password, setPassword] = useState("");
   const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem("token"));
+  const [magic, setMagic] = useState([]);
   const [show, setShow] = useState(false);
   const [riotIdError, setRiotIdError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
@@ -103,9 +110,23 @@ const Home = (): React.ReactElement => {
     enabled: !!isFetchingProfile,
   });
 
-  if (profileError || agentError) {
+  const {
+    isFetching: isFetchingMatchData,
+    error: matchDataError,
+    data: matchData,
+  } = useQuery({
+    queryKey: ["matchData"],
+    queryFn: () =>
+      fetch(config.apiUrl + "/matches", {
+        headers: { Authorization: "Bearer " + localStorage.token },
+      }).then((res) => res.json()),
+    enabled: !!isFetchingProfile,
+  });
+
+  if (profileError || agentError || matchDataError) {
     localStorage.removeItem("token");
     setLoggedIn(false);
+    setMagic([]);
   }
 
   const toast = useToast();
@@ -159,10 +180,70 @@ const Home = (): React.ReactElement => {
     }
   };
 
+  const handleUpdateInfo = async (): Promise<void> => {
+    if (!loggedIn) {
+      return;
+    }
+
+    const response = await fetch(config.apiUrl + "/update_user_data", {
+      headers: { Authorization: "Bearer " + localStorage.token },
+    });
+
+    const data = await response.json();
+
+    if (data.success === true) {
+      window.location.reload();
+    } else {
+      toast({
+        title: "Update failed",
+        status: "error",
+        position: "top",
+        duration: 5000,
+      });
+    }
+  };
+
+  const handleMagic = async (): Promise<void> => {
+    if (!loggedIn) {
+      return;
+    }
+
+    const response = await fetch(config.apiUrl + "/model_matches", {
+      headers: { Authorization: "Bearer " + localStorage.token },
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setMagic(data);
+    } else {
+      toast({
+        title: "Magic failed",
+        status: "error",
+        position: "top",
+        duration: 5000,
+      });
+    }
+  };
+
   const handleLogout = (): void => {
     localStorage.removeItem("token");
     setLoggedIn(false);
+    setMagic([]);
   };
+
+  const [isOpen, setIsOpen] = useState(false);
+  const onClose = () => setIsOpen(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  
+  const handleDeleteConfirm = () => {
+    setIsOpen(false);
+    handleDelete();
+  };
+
+  const handleDelete = (): void => {
+    console.log("Attempting to delete account");
+  }
 
   return (
     <Flex minH={"100vh"} align={"center"} justify={"center"}>
@@ -171,7 +252,13 @@ const Home = (): React.ReactElement => {
           <ValorantIcon boxSize={10}></ValorantIcon>
           <Heading size="lg">Valorant Stats</Heading>
           <Spacer />
-          {loggedIn ? <Button onClick={handleLogout}>Log Out</Button> : null}
+          {loggedIn ? (
+            <HStack>
+              <Button onClick={handleUpdateInfo}>Refresh Data</Button>
+              <Button onClick={() => setIsOpen(true)}>Delete Account</Button>
+              <Button onClick={handleLogout}>Log Out</Button>
+            </HStack>
+          ) : null}
         </HStack>
 
         <HStack>
@@ -265,7 +352,7 @@ const Home = (): React.ReactElement => {
           </Stat>
 
           <Stat>
-            <StatLabel>Most Played Weapon</StatLabel>
+            <StatLabel>Most Played Map</StatLabel>
             <Skeleton isLoaded={!isFetchingStats}>
               <StatNumber>{statsData?.best_map.map_name}</StatNumber>
               <StatHelpText>
@@ -276,44 +363,127 @@ const Home = (): React.ReactElement => {
         </HStack>
 
         <Divider></Divider>
+        {loggedIn ? (
+          <Skeleton isLoaded={!isFetchingMatchData && !isFetchingProfile}>
+            <VStack align="unset" minWidth={"70vw"}>
+              <HStack>
+                <Heading size="md">Match History</Heading>
+                <Spacer></Spacer>
+                <Button onClick={handleMagic}>Magic ✨</Button>
+              </HStack>
+              <Spacer />
+              <Text>
+                Click the magic button to see your calculated win rate
+                percentage!
+              </Text>
 
-        <VStack align="unset" minWidth={"70vw"}>
-          <Heading size="md">Current Top Agents</Heading>
-          <Text>
-            Find out which Agents perform best based on their win rates, pick
-            rates, average scores, and more.
-          </Text>
-          <Spacer />
+              <TableContainer>
+                <Table variant="simple">
+                  <Thead>
+                    <Tr>
+                      <Th>Date</Th>
+                      <Th>Agent Name</Th>
+                      <Th>Map Name</Th>
+                      <Th>Kills</Th>
+                      <Th>Deaths</Th>
+                      <Th>Assists</Th>
+                      <Th>ACS</Th>
+                      <Th>Headshot Ratio</Th>
+                      <Th>First Kills</Th>
+                      <Th>First Deaths</Th>
+                      {magic.length > 0 ? <Th>Magic</Th> : null}
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {matchData?.map((match: any, idx: number) => (
+                      <Tr key={idx}>
+                        <Td>{match.date_info.split(" ")[0]}</Td>
+                        <Td>{match.agent_name}</Td>
+                        <Td>{match.map_name}</Td>
+                        <Td>{match.kills}</Td>
+                        <Td>{match.deaths}</Td>
+                        <Td>{match.assists}</Td>
+                        <Td>{match.average_combat_score}</Td>
+                        <Td>{match.headshot_ratio}%</Td>
+                        <Td>{match.first_kills}</Td>
+                        <Td>{match.first_deaths}</Td>
+                        {magic.length > 0 ? (
+                          <Td>{Number(magic[idx] * 100).toFixed(2)}%</Td>
+                        ) : null}
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            </VStack>
+          </Skeleton>
+        ) : (
+          <VStack align="unset" minWidth={"70vw"}>
+            <Heading size="md">Current Top Agents</Heading>
+            <Text>
+              Find out which Agents perform best based on their win rates, pick
+              rates, average scores, and more.
+            </Text>
+            <Spacer />
 
-          <TableContainer>
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Rank</Th>
-                  <Th>Agent Name</Th>
-                  <Th>Win Rate</Th>
-                  <Th>Pick Rate</Th>
-                  <Th>K/D</Th>
-                  <Th>ACS</Th>
-                  <Th>Matches</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {statsData?.top_agents.map((agent: any, idx: number) => (
+            <TableContainer>
+              <Table variant="simple">
+                <Thead>
                   <Tr>
-                    <Td>{idx + 1}</Td>
-                    <Td>{agent.agent_name}</Td>
-                    <Td>{Number(agent.avg_win_rate.toFixed(2))}%</Td>
-                    <Td>{Number(agent.avg_pick_rate.toFixed(2))}%</Td>
-                    <Td>{Number(agent.avg_kd.toFixed(2))}</Td>
-                    <Td>{Math.round(agent.average_acs)}</Td>
-                    <Td>{agent.match_count.toLocaleString()}</Td>
+                    <Th>Rank</Th>
+                    <Th>Agent Name</Th>
+                    <Th>Win Rate</Th>
+                    <Th>Pick Rate</Th>
+                    <Th>K/D</Th>
+                    <Th>ACS</Th>
+                    <Th>Matches</Th>
                   </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TableContainer>
-        </VStack>
+                </Thead>
+                <Tbody>
+                  {statsData?.top_agents.map((agent: any, idx: number) => (
+                    <Tr>
+                      <Td>{idx + 1}</Td>
+                      <Td>{agent.agent_name}</Td>
+                      <Td>{Number(agent.avg_win_rate.toFixed(2))}%</Td>
+                      <Td>{Number(agent.avg_pick_rate.toFixed(2))}%</Td>
+                      <Td>{Number(agent.avg_kd.toFixed(2))}</Td>
+                      <Td>{Math.round(agent.average_acs)}</Td>
+                      <Td>{agent.match_count.toLocaleString()}</Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </TableContainer>
+          </VStack>
+        )}
+
+        <AlertDialog
+        isOpen={isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onClose}
+        >
+        <AlertDialogOverlay>
+            <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Delete Account
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+                Are you sure you want to delete your account? This action cannot be undone.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+                <Button ref={cancelRef} onClick={onClose}>
+                Cancel
+                </Button>
+                <Button colorScheme="red" onClick={handleDeleteConfirm} ml={3}>
+                Delete
+                </Button>
+            </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialogOverlay>
+        </AlertDialog>
+
       </VStack>
     </Flex>
   );

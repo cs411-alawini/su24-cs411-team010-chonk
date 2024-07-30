@@ -1,9 +1,11 @@
+import pickle
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Annotated, Union
 
 import config
 import jwt
+import pandas as pd
 import scipy as sp
 import valo_api
 from auth import (
@@ -22,9 +24,20 @@ from sqlalchemy import text
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
+def replace_percentage(df, column):
+    df[column] = df[column].str.replace("%", "").astype(float)
+    return df
+
+
+import __main__  # noqa: E402
+
+__main__.replace_percentage = replace_percentage  # type: ignore
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.db = engine
+    app.state.model = pickle.load(open("model.pkl", "rb"))
     yield
     engine.dispose()
 
@@ -193,6 +206,52 @@ async def player_stats(
         "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
     }
 
+@app.get("/player-monthly-stats")
+async def player_monthly_stats(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        """
+            SELECT 
+                DATE_FORMAT(STR_TO_DATE(g.date_info, '%Y-%m-%d %H:%i:%s'), '%Y-%m-01') AS month,
+                AVG(ps.kills) as avgKillsPerGame,
+                AVG(ps.deaths) as avgDeathsPerGame,
+                AVG(ps.assists) as avgAssistsPerGame,
+                AVG(ps.average_combat_score) as avgCombatScorePerGame,
+                AVG(ps.headshot_ratio) as avgHeadShotRatio,
+                AVG(ps.first_kills) as avgFirstBloodsPerGame
+            FROM 
+                Player_Stats ps
+            JOIN 
+                Game g ON ps.game_id = g.game_id
+            WHERE 
+                ps.player_id = :player_id
+            GROUP BY 
+                month
+            ORDER BY 
+                month
+        """
+    ).bindparams(player_id=player_id)
+
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    
+    player_stats_data = result.fetchall()
+    
+    return [
+        {
+            "month": row.month,
+            "avgKillsPerGame": round(row.avgKillsPerGame, 2) if row.avgKillsPerGame is not None else None,
+            "avgDeathsPerGame": round(row.avgDeathsPerGame, 2) if row.avgDeathsPerGame is not None else None,
+            "avgAssistsPerGame": round(row.avgAssistsPerGame, 2) if row.avgAssistsPerGame is not None else None,
+            "avgCombatScorePerGame": round(row.avgCombatScorePerGame, 2) if row.avgCombatScorePerGame is not None else None,
+            "avgHeadShotRatio": round(row.avgHeadShotRatio, 2) if row.avgHeadShotRatio is not None else None,
+            "avgFirstBloodsPerGame": round(row.avgFirstBloodsPerGame, 2) if row.avgFirstBloodsPerGame is not None else None,
+        }
+        for row in player_stats_data
+    ]
 
 @app.get("/update_user_data")
 async def update_user_data(
@@ -200,19 +259,19 @@ async def update_user_data(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     player_id = current_user.player_id
+
+    if not player_id:
+        return
+
     if "#" not in player_id:
-        return "Bad ign"
+        return {"success": False}
     ign_tag = player_id.split("#")
     playerign = ign_tag[0]
     playertag = ign_tag[1]
 
-    settings = get_settings()
     query = text(
         "select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1 where player_id = :playerid"
     ).bindparams(playerid=player_id)
-    beforeupdate = list(request.app.state.db.execute(query))
-
-    valo_api.set_api_key(settings.henrik_api_key.get_secret_value())
     matches = await valo_api.get_match_history_by_name_v3_async(  # type: ignore
         "na", playerign, playertag, game_mode="competitive"
     )
@@ -226,7 +285,7 @@ async def update_user_data(
         winteam = "Blue"
         if match.teams.red.has_won:
             winteam = "Red"
-        print(metadata.map, metadata.game_start, metadata.matchid)
+        # print(metadata.map, metadata.game_start, metadata.matchid)
         query = text("select map_id from Maps where map_name = :map").bindparams(
             map=metadata.map
         )
@@ -241,12 +300,15 @@ async def update_user_data(
         )  # maybe can get game id in same execution as insert?
         result = request.app.state.db.execute(query)
         game_id = result.first()[0]
-        print(f"gameid = {game_id}")
+        # print(f"gameid = {game_id}")
 
         query = text(
             "select * from playerstats1  where game_id =:id and player_id = :playerid"
         ).bindparams(id=game_id, playerid=player_id)
-        if not request.app.state.db.execute(query).first():
+        with request.app.state.db.connect() as connection:
+            result = connection.execute(query)
+
+        if not result.first():
             # print(matchdict.players)
             matchrounds = metadata.rounds_played
             player_data = match.players.all_players
@@ -266,57 +328,30 @@ async def update_user_data(
                     query = text(
                         "select agent_id from Agents where agent_name = :agent"
                     ).bindparams(agent=player.character)
-                    agent = request.app.state.db.execute(query).first()[0]
-                    stmst = text(
-                        "insert into  playerstats1 (game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)"
-                    ).bindparams(
-                        gid=game_id,
-                        pid=player_id,
-                        w=didwin,
-                        aid=agent,
-                        acs=player.stats.score / matchrounds,
-                        k=player.stats.kills,
-                        d=player.stats.deaths,
-                        a=player.stats.assists,
-                        adr=player.damage_made / matchrounds,
-                        hr=player.stats.headshots / shots,
-                        tid=player.currenttier,
-                    )
-                    request.app.state.db.execute(stmst)
-                    request.app.state.db.commit()
 
+                    
+                    with request.app.state.db.connect() as connection:
+                        agent = connection.execute(query).first()[0]
+                        stmst = text(
+                            "insert into playerstats1 (game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)"
+                        ).bindparams(
+                            gid=game_id,
+                            pid=player_id,
+                            w=didwin,
+                            aid=agent,
+                            acs=player.stats.score / matchrounds,
+                            k=player.stats.kills,
+                            d=player.stats.deaths,
+                            a=player.stats.assists,
+                            adr=player.damage_made / matchrounds,
+                            hr=player.stats.headshots / shots,
+                            tid=player.currenttier,
+                        )
+                        connection.execute(stmst)
+                        connection.commit()
     request.app.state.db.execute(text("UNLOCK TABLES"))
     request.app.state.db.execute(text("COMMIT"))
-
-
-    query = text(
-        "select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1  where player_id = :playerid"
-    ).bindparams(playerid=player_id)
-    after = list(request.app.state.db.execute(query))
-    print(beforeupdate, after)
-    return {"hi"}
-
-
-@app.get("/most_played_agent")
-def most_played_agent(
-    request: Request,
-    current_user: Annotated[User, Depends(get_current_user)],
-):
-    player_id = current_user.player_id
-    query = text(
-        "select agent_name as agent from Player_Stats p left join Agents a on p.agent_id = a.agent_id where player_id=:player_id group by p.agent_id order by count(p.agent_id) desc limit 1"
-    ).bindparams(player_id=player_id)
-    result = request.app.state.db.execute(query)
-    player_stats_data = result.fetchone()
-    return {
-        "avgKillsPerGame": player_stats_data.avgKillsPerGame,
-        "avgDeathsPerGame": player_stats_data.avgDeathsPerGame,
-        "avgAssistsPerGame": player_stats_data.avgAssistsPerGame,
-        "avgCombatScorePerGame": player_stats_data.avgCombatScorePerGame,
-        "avgHeadShotRatio": player_stats_data.avgHeadShotRatio,
-        "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
-    }
-
+    return {"success": True}
 
 @app.get("/most_played_agent")
 def most_played_agent(
@@ -369,14 +404,16 @@ def get_pro_lookalike(
     most_played_user = result.fetchone()
     agent = most_played_user.agent
     pro_query = text(
-        "SELECT player_id, avg(average_combat_score), avg(deaths),avg(assists),avg(kills_deaths) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where agent_id=:agent and tier_id = 21 group by player_id  order by count(agent_id) desc limit 100"
+        "SELECT player_id, avg(average_combat_score), avg(deaths),avg(assists) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where agent_id=:agent and tier_id = 21 group by player_id  order by count(agent_id) desc limit 100"
     ).bindparams(agent=agent)
-    pros = list(connection.execute(pro_query))
+    with request.app.state.db.connect() as connection:
+        pros = list(connection.execute(pro_query))
     pro_tree = sp.spatial.KDTree([x[1:] for x in pros])
     query = text(
-        "SELECT avg(average_combat_score), avg(deaths),avg(assists),avg(kills_deaths) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where player_id=:player_id group by player_id"
+        "SELECT avg(average_combat_score), avg(deaths),avg(assists) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where player_id=:player_id group by player_id"
     ).bindparams(player_id=player_id)
-    user_stats = list(connection.execute(query))
+    with request.app.state.db.connect() as connection:
+        user_stats = list(connection.execute(query))
     _, best_match = pro_tree.query(user_stats, k=1)
     return {"best_match": f"{pros[best_match[0]][0]}"}
 
@@ -453,11 +490,14 @@ def agent_recommendations(
 def top_agent_map(
     request: Request,
 ):
-    query = text(
-        "SELECT m.map_name, a.agent_name, MAX(astats.acs) AS MaxACS"
-        " FROM Agent_Stats astats JOIN Agents a ON astats.agent_id = a.agent_id JOIN Map_Stats mstats ON astats.map_id = mstats.map_id AND astats.tier_id = mstats.tier_id JOIN Maps m ON mstats.map_id = m.map_id"
-        " GROUP BY m.map_name, a.agent_name ORDER BY m.map_name, MaxACS DESC LIMIT 15"
-    )
+    query = text("""
+        SELECT m.map_name, a.agent_name, astats.acs AS MaxACS
+        FROM Agent_Stats astats JOIN Agents a ON astats.agent_id = a.agent_id JOIN Map_Stats mstats ON astats.map_id = mstats.map_id AND astats.tier_id = mstats.tier_id JOIN Maps m ON mstats.map_id = m.map_id
+         WHERE (astats.map_id, astats.acs) IN (
+            SELECT map_id, MAX(acs) FROM Agent_Stats GROUP BY map_id
+        )
+         ORDER BY m.map_name, MaxACS DESC
+    """)
     with request.app.state.db.connect() as connection:
         result = connection.execute(query)
     top_agent_map = result.fetchall()
@@ -584,6 +624,39 @@ async def delete_user(
 #     DELIMITER ;
 #     """
 
+
+@app.get("/matches")
+async def matches(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT * from Player_Stats natural join Game natural join Maps natural join Agents where player_id=:player_id  order by game_id limit 5"
+    ).bindparams(player_id=player_id)
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    match_data = result.fetchall()
+
+    matches = [
+        {
+            "date_info": match.date_info,
+            "agent_name": match.agent_name,
+            "map_name": match.map_name,
+            "kills": match.kills,
+            "deaths": match.deaths,
+            "assists": match.assists,
+            "average_combat_score": match.average_combat_score,
+            "headshot_ratio": match.headshot_ratio,
+            "first_kills": match.first_kills,
+            "first_deaths": match.first_deaths,
+        }
+        for match in match_data
+    ]
+
+    return matches
+
+
 # DELIMITER //
 
 # CREATE TRIGGER userlogin BEFORE INSERT ON User
@@ -600,3 +673,42 @@ async def delete_user(
 # END //
 
 # DELIMITER ;
+
+
+@app.get("/model_matches")
+async def model_matches(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT * from Player_Stats natural join Game natural join Maps natural join Agents where player_id=:player_id  order by game_id limit 5"
+    ).bindparams(player_id=player_id)
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    match_data = result.fetchall()
+
+    matches = [
+        {
+            "side": match.team_side,
+            "kill_assist_trade_survive_ratio": str(
+                match.kill_assist_trade_survive_ratio
+            ),
+            "tier": match.tier_id,
+            "kills_deaths": match.kills - match.deaths,
+            "agent": match.agent_id,
+            "average_damage_per_round": match.average_damage_per_round,
+            "kills": match.kills,
+            "deaths": match.deaths,
+            "assists": match.assists,
+            "average_combat_score": match.average_combat_score,
+            "headshot_ratio": str(match.headshot_ratio),
+            "first_kills": match.first_kills,
+            "first_deaths": match.first_deaths,
+        }
+        for match in match_data
+    ]
+
+    X = pd.DataFrame(matches)
+    predictions = request.app.state.model.predict_proba(X)
+    return [prediction[1] for prediction in predictions]
