@@ -84,7 +84,7 @@ const Lookup = () => {
         setFormData({});
         setOutput([]);
         if (type !== 'agentRecommendations') {
-            handleLookup();
+            handleLookup(type);
         }
     };
 
@@ -116,7 +116,7 @@ const Lookup = () => {
         // }
     // };
 
-    const handleLookup = async () => {
+    const handleLookup = async (type: LookupType) => {
         try {
             let response;
             let data;
@@ -260,7 +260,7 @@ const Lookup = () => {
                             ))}
                             {/* Add more options as needed */}
                             </Select>
-                            <Button variant="valoRed" onClick={handleLookup}>Enter</Button>
+                            <Button variant="valoRed" onClick={() => handleLookup(lookupType)}>Enter</Button>
                         </>
                         )}
 
