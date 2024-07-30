@@ -639,7 +639,21 @@ async def delete_user(
 #     END //
 #     DELIMITER ;
 #     """
+# DELIMITER //
 
+# CREATE TRIGGER playeradd BEFORE INSERT ON Player
+# FOR EACH ROW
+# BEGIN
+#     DECLARE id_count INT;
+#     SELECT COUNT(*) INTO id_count
+#     FROM Player
+#     WHERE player_id = NEW.player_id;
+#     IF id_count != 0 THEN
+#         UPDATE Player SET current_tier_id = new.current_tier_id  where player_id = NEW.player_id;
+#     END IF;
+# END //
+
+# DELIMITER;
 
 @app.get("/matches")
 async def matches(
@@ -671,23 +685,6 @@ async def matches(
     ]
 
     return matches
-
-
-# DELIMITER //
-
-# CREATE TRIGGER GAMEADD BEFORE INSERT ON Game
-# FOR EACH ROW
-# BEGIN
-#     DECLARE game_count INT;
-#     SELECT COUNT(*) INTO game_count
-#     FROM Game
-#     WHERE riot_id = NEW.riot_id;
-#     IF game_count != 0 THEN
-#         DELETE FROM GAME where riot_id = NEW.riot_id);
-#     END IF;
-# END //
-
-# DELIMITER ;
 
 
 @app.get("/model_matches")
