@@ -200,19 +200,19 @@ async def update_user_data(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     player_id = current_user.player_id
+
+    if not player_id:
+        return
+
     if "#" not in player_id:
-        return "Bad ign"
+        return {"success": False}
     ign_tag = player_id.split("#")
     playerign = ign_tag[0]
     playertag = ign_tag[1]
 
-    settings = get_settings()
     query = text(
         "select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1 where player_id = :playerid"
     ).bindparams(playerid=player_id)
-    beforeupdate = list(request.app.state.db.execute(query))
-
-    valo_api.set_api_key(settings.henrik_api_key.get_secret_value())
     matches = await valo_api.get_match_history_by_name_v3_async(  # type: ignore
         "na", playerign, playertag, game_mode="competitive"
     )
@@ -222,7 +222,7 @@ async def update_user_data(
         winteam = "Blue"
         if match.teams.red.has_won:
             winteam = "Red"
-        print(metadata.map, metadata.game_start, metadata.matchid)
+        # print(metadata.map, metadata.game_start, metadata.matchid)
         query = text("select map_id from Maps where map_name = :map").bindparams(
             map=metadata.map
         )
@@ -237,12 +237,15 @@ async def update_user_data(
         )  # maybe can get game id in same execution as insert?
         result = request.app.state.db.execute(query)
         game_id = result.first()[0]
-        print(f"gameid = {game_id}")
+        # print(f"gameid = {game_id}")
 
         query = text(
             "select * from playerstats1  where game_id =:id and player_id = :playerid"
         ).bindparams(id=game_id, playerid=player_id)
-        if not request.app.state.db.execute(query).first():
+        with request.app.state.db.connect() as connection:
+            result = connection.execute(query)
+
+        if not result.first():
             # print(matchdict.players)
             matchrounds = metadata.rounds_played
             player_data = match.players.all_players
@@ -259,30 +262,27 @@ async def update_user_data(
                     query = text(
                         "select agent_id from Agents where agent_name = :agent"
                     ).bindparams(agent=player.character)
-                    agent = request.app.state.db.execute(query).first()[0]
-                    stmst = text(
-                        "insert into  playerstats1 (game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)"
-                    ).bindparams(
-                        gid=game_id,
-                        pid=player_id,
-                        w=didwin,
-                        aid=agent,
-                        acs=player.stats.score / matchrounds,
-                        k=player.stats.kills,
-                        d=player.stats.deaths,
-                        a=player.stats.assists,
-                        adr=player.damage_made / matchrounds,
-                        hr=player.stats.headshots / shots,
-                        tid=player.currenttier,
-                    )
-                    request.app.state.db.execute(stmst)
-                    request.app.state.db.commit()
-    query = text(
-        "select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1  where player_id = :playerid"
-    ).bindparams(playerid=player_id)
-    after = list(request.app.state.db.execute(query))
-    print(beforeupdate, after)
-    return {"hi"}
+                    with request.app.state.db.connect() as connection:
+                        agent = connection.execute(query).first()[0]
+                        stmst = text(
+                            "insert into playerstats1 (game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)"
+                        ).bindparams(
+                            gid=game_id,
+                            pid=player_id,
+                            w=didwin,
+                            aid=agent,
+                            acs=player.stats.score / matchrounds,
+                            k=player.stats.kills,
+                            d=player.stats.deaths,
+                            a=player.stats.assists,
+                            adr=player.damage_made / matchrounds,
+                            hr=player.stats.headshots / shots,
+                            tid=player.currenttier,
+                        )
+                        connection.execute(stmst)
+                        connection.commit()
+
+    return {"success": True}
 
 
 @app.get("/most_played_agent")
@@ -541,6 +541,39 @@ def analyze_performance(
 #     END //
 #     DELIMITER ;
 #     """
+
+
+@app.get("/matches")
+async def matches(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT * from Player_Stats natural join Game natural join Maps natural join Agents where player_id=:player_id  order by game_id limit 5"
+    ).bindparams(player_id=player_id)
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    match_data = result.fetchall()
+
+    matches = [
+        {
+            "date_info": match.date_info,
+            "agent_name": match.agent_name,
+            "map_name": match.map_name,
+            "kills": match.kills,
+            "deaths": match.deaths,
+            "assists": match.assists,
+            "average_combat_score": match.average_combat_score,
+            "headshot_ratio": match.headshot_ratio,
+            "first_kills": match.first_kills,
+            "first_deaths": match.first_deaths,
+        }
+        for match in match_data
+    ]
+
+    return matches
+
 
 # DELIMITER //
 
