@@ -145,10 +145,15 @@ const Lookup = () => {
                     data = await response.json();
                     console.log('Agent Synergies Response:', data); // Log the response data
                     
-                    // Parse the agent_synergies response
-                    const parsedSynergies = JSON.parse(data.agent_synergies.replace(/'/g, '"')).map((item: any[]) => item[0]);
+                    // Manually parse the agent_synergies response
+                    const synergiesString = data.agent_synergies;
+                    const parsedSynergies = synergiesString
+                        .slice(1, -1) // Remove the square brackets
+                        .split("), (") // Split by "), ("
+                        .map((item: string) => item.replace(/[\(\)'"]/g, "").trim()); // Remove parentheses, quotes, and trim spaces
+
                     console.log('Parsed Agent Synergies:', parsedSynergies); // Log the parsed data
-    
+
                     setOutput(parsedSynergies);
                     break;
     
