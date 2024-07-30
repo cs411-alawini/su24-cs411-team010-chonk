@@ -5,6 +5,7 @@ from typing import Annotated, Union
 import config
 import jwt
 import scipy as sp
+import valo_api
 from auth import (
     authenticate_user,
     create_access_token,
@@ -191,6 +192,97 @@ async def player_stats(
         "avgHeadShotRatio": player_stats_data.avgHeadShotRatio,
         "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
     }
+
+
+@app.get("/update_user_data")
+async def update_user_data(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+
+    if not player_id:
+        return
+
+    if "#" not in player_id:
+        return {"success": False}
+    ign_tag = player_id.split("#")
+    playerign = ign_tag[0]
+    playertag = ign_tag[1]
+
+    query = text(
+        "select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1 where player_id = :playerid"
+    ).bindparams(playerid=player_id)
+    matches = await valo_api.get_match_history_by_name_v3_async(  # type: ignore
+        "na", playerign, playertag, game_mode="competitive"
+    )
+
+    for match in matches:
+        metadata = match.metadata
+        winteam = "Blue"
+        if match.teams.red.has_won:
+            winteam = "Red"
+        # print(metadata.map, metadata.game_start, metadata.matchid)
+        query = text("select map_id from Maps where map_name = :map").bindparams(
+            map=metadata.map
+        )
+        mapp = request.app.state.db.execute(query).first()[0]
+        stmst = text(
+            "insert into Game(map_id, date_info, riot_id) values(:map, :game_start, :matchid)"
+        ).bindparams(map=mapp, game_start=metadata.game_start, matchid=metadata.matchid)
+        request.app.state.db.execute(stmst)
+        request.app.state.db.commit()
+        query = text("select game_id from Game where riot_id =:id").bindparams(
+            id=metadata.matchid
+        )  # maybe can get game id in same execution as insert?
+        result = request.app.state.db.execute(query)
+        game_id = result.first()[0]
+        # print(f"gameid = {game_id}")
+
+        query = text(
+            "select * from playerstats1  where game_id =:id and player_id = :playerid"
+        ).bindparams(id=game_id, playerid=player_id)
+        with request.app.state.db.connect() as connection:
+            result = connection.execute(query)
+
+        if not result.first():
+            # print(matchdict.players)
+            matchrounds = metadata.rounds_played
+            player_data = match.players.all_players
+            for player in player_data:
+                if player.tag == playertag and player.name == playerign:
+                    didwin = False
+                    if player.team == winteam:
+                        didwin = True
+                    shots = (
+                        player.stats.bodyshots
+                        + player.stats.headshots
+                        + player.stats.legshots
+                    )
+                    query = text(
+                        "select agent_id from Agents where agent_name = :agent"
+                    ).bindparams(agent=player.character)
+                    with request.app.state.db.connect() as connection:
+                        agent = connection.execute(query).first()[0]
+                        stmst = text(
+                            "insert into playerstats1 (game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)"
+                        ).bindparams(
+                            gid=game_id,
+                            pid=player_id,
+                            w=didwin,
+                            aid=agent,
+                            acs=player.stats.score / matchrounds,
+                            k=player.stats.kills,
+                            d=player.stats.deaths,
+                            a=player.stats.assists,
+                            adr=player.damage_made / matchrounds,
+                            hr=player.stats.headshots / shots,
+                            tid=player.currenttier,
+                        )
+                        connection.execute(stmst)
+                        connection.commit()
+
+    return {"success": True}
 
 
 @app.get("/most_played_agent")
@@ -477,3 +569,21 @@ async def matches(
     ]
 
     return matches
+
+
+# DELIMITER //
+
+# CREATE TRIGGER userlogin BEFORE INSERT ON User
+# FOR EACH ROW
+# BEGIN
+#     DECLARE user_count INT;
+#     SELECT COUNT(*) INTO user_count
+#     FROM User
+#     WHERE username = NEW.username;
+#     IF user_count = 0 THEN
+#         INSERT INTO User (username, player_id, password_hash)
+#         VALUES (NEW.username, NEW.player_id, NEW.password_hash);
+#     END IF;
+# END //
+
+# DELIMITER ;
