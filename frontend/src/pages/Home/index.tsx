@@ -1,4 +1,4 @@
-import { BaseSyntheticEvent, useState, MutableRefObject, useRef } from "react";
+import { BaseSyntheticEvent, useState, useRef } from "react";
 import {
   InputGroup,
   Input,
