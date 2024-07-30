@@ -253,7 +253,7 @@ async def player_monthly_stats(
         for row in player_stats_data
     ]
 
-@app.get("/update_user_data")
+@app.post("/update_user_data")
 async def update_user_data(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
