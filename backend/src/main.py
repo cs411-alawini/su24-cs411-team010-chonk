@@ -492,6 +492,19 @@ def analyze_performance(
     return {"kowalski_analysis": f"{analysis}"}
 
 
+@app.post("/delete_user")
+async def delete_user(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    request.app.state.db.connect.execute(text("DELETE FROM User WHERE username = :uname").bindparams(uname = username))
+
+
+
+
+
+
 # stored_procedure = """
 #     DELIMITER //
 #     CREATE PROCEDURE AnalyzePlayerPerformance(IN player_id VARCHAR(50), IN map_name VARCHAR(50))
