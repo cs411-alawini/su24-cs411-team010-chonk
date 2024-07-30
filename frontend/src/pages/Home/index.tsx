@@ -103,7 +103,20 @@ const Home = (): React.ReactElement => {
     enabled: !!isFetchingProfile,
   });
 
-  if (profileError || agentError) {
+  const {
+    isFetching: isFetchingMatchData,
+    error: matchDataError,
+    data: matchData,
+  } = useQuery({
+    queryKey: ["matchData"],
+    queryFn: () =>
+      fetch(config.apiUrl + "/matches", {
+        headers: { Authorization: "Bearer " + localStorage.token },
+      }).then((res) => res.json()),
+    enabled: !!isFetchingProfile,
+  });
+
+  if (profileError || agentError || matchDataError) {
     localStorage.removeItem("token");
     setLoggedIn(false);
   }
@@ -171,7 +184,12 @@ const Home = (): React.ReactElement => {
           <ValorantIcon boxSize={10}></ValorantIcon>
           <Heading size="lg">Valorant Stats</Heading>
           <Spacer />
-          {loggedIn ? <Button onClick={handleLogout}>Log Out</Button> : null}
+          {loggedIn ? (
+            <HStack>
+              <Button onClick={handleLogout}>Refresh Data</Button>
+              <Button onClick={handleLogout}>Log Out</Button>
+            </HStack>
+          ) : null}
         </HStack>
 
         <HStack>
@@ -265,7 +283,7 @@ const Home = (): React.ReactElement => {
           </Stat>
 
           <Stat>
-            <StatLabel>Most Played Weapon</StatLabel>
+            <StatLabel>Most Played Map</StatLabel>
             <Skeleton isLoaded={!isFetchingStats}>
               <StatNumber>{statsData?.best_map.map_name}</StatNumber>
               <StatHelpText>
@@ -276,44 +294,87 @@ const Home = (): React.ReactElement => {
         </HStack>
 
         <Divider></Divider>
+        {loggedIn ? (
+          <Skeleton isLoaded={!isFetchingMatchData && !isFetchingProfile}>
+            <VStack align="unset" minWidth={"70vw"}>
+              <Heading size="md">Match History</Heading>
+              <Spacer />
 
-        <VStack align="unset" minWidth={"70vw"}>
-          <Heading size="md">Current Top Agents</Heading>
-          <Text>
-            Find out which Agents perform best based on their win rates, pick
-            rates, average scores, and more.
-          </Text>
-          <Spacer />
+              <TableContainer>
+                <Table variant="simple">
+                  <Thead>
+                    <Tr>
+                      <Th>Date</Th>
+                      <Th>Agent Name</Th>
+                      <Th>Map Name</Th>
+                      <Th>Kills</Th>
+                      <Th>Deaths</Th>
+                      <Th>Assists</Th>
+                      <Th>ACS</Th>
+                      <Th>Headshot Ratio</Th>
+                      <Th>First Kills</Th>
+                      <Th>First Deaths</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {matchData?.map((match: any, idx: number) => (
+                      <Tr key={idx}>
+                        <Td>{match.date_info.split(" ")[0]}</Td>
+                        <Td>{match.agent_name}</Td>
+                        <Td>{match.map_name}</Td>
+                        <Td>{match.kills}</Td>
+                        <Td>{match.deaths}</Td>
+                        <Td>{match.assists}</Td>
+                        <Td>{match.average_combat_score}</Td>
+                        <Td>{match.headshot_ratio}%</Td>
+                        <Td>{match.first_kills}</Td>
+                        <Td>{match.first_deaths}</Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            </VStack>
+          </Skeleton>
+        ) : (
+          <VStack align="unset" minWidth={"70vw"}>
+            <Heading size="md">Current Top Agents</Heading>
+            <Text>
+              Find out which Agents perform best based on their win rates, pick
+              rates, average scores, and more.
+            </Text>
+            <Spacer />
 
-          <TableContainer>
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Rank</Th>
-                  <Th>Agent Name</Th>
-                  <Th>Win Rate</Th>
-                  <Th>Pick Rate</Th>
-                  <Th>K/D</Th>
-                  <Th>ACS</Th>
-                  <Th>Matches</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {statsData?.top_agents.map((agent: any, idx: number) => (
+            <TableContainer>
+              <Table variant="simple">
+                <Thead>
                   <Tr>
-                    <Td>{idx + 1}</Td>
-                    <Td>{agent.agent_name}</Td>
-                    <Td>{Number(agent.avg_win_rate.toFixed(2))}%</Td>
-                    <Td>{Number(agent.avg_pick_rate.toFixed(2))}%</Td>
-                    <Td>{Number(agent.avg_kd.toFixed(2))}</Td>
-                    <Td>{Math.round(agent.average_acs)}</Td>
-                    <Td>{agent.match_count.toLocaleString()}</Td>
+                    <Th>Rank</Th>
+                    <Th>Agent Name</Th>
+                    <Th>Win Rate</Th>
+                    <Th>Pick Rate</Th>
+                    <Th>K/D</Th>
+                    <Th>ACS</Th>
+                    <Th>Matches</Th>
                   </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TableContainer>
-        </VStack>
+                </Thead>
+                <Tbody>
+                  {statsData?.top_agents.map((agent: any, idx: number) => (
+                    <Tr>
+                      <Td>{idx + 1}</Td>
+                      <Td>{agent.agent_name}</Td>
+                      <Td>{Number(agent.avg_win_rate.toFixed(2))}%</Td>
+                      <Td>{Number(agent.avg_pick_rate.toFixed(2))}%</Td>
+                      <Td>{Number(agent.avg_kd.toFixed(2))}</Td>
+                      <Td>{Math.round(agent.average_acs)}</Td>
+                      <Td>{agent.match_count.toLocaleString()}</Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </TableContainer>
+          </VStack>
+        )}
       </VStack>
     </Flex>
   );

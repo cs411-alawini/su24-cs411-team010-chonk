@@ -445,3 +445,35 @@ def analyze_performance(
 #     END //
 #     DELIMITER ;
 #     """
+
+
+@app.get("/matches")
+async def matches(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT * from Player_Stats natural join Game natural join Maps natural join Agents where player_id=:player_id  order by game_id limit 5"
+    ).bindparams(player_id=player_id)
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    match_data = result.fetchall()
+
+    matches = [
+        {
+            "date_info": match.date_info,
+            "agent_name": match.agent_name,
+            "map_name": match.map_name,
+            "kills": match.kills,
+            "deaths": match.deaths,
+            "assists": match.assists,
+            "average_combat_score": match.average_combat_score,
+            "headshot_ratio": match.headshot_ratio,
+            "first_kills": match.first_kills,
+            "first_deaths": match.first_deaths,
+        }
+        for match in match_data
+    ]
+
+    return matches
