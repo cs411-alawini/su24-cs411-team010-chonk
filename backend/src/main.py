@@ -37,7 +37,7 @@ __main__.replace_percentage = replace_percentage  # type: ignore
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.db = engine
-    app.state.model = pickle.load(open("model.pkl", "rb"))
+    app.state.model = pickle.load(open("/app/model.pkl", "rb"))
     yield
     engine.dispose()
 
