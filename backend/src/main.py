@@ -336,14 +336,16 @@ def get_pro_lookalike(
     most_played_user = result.fetchone()
     agent = most_played_user.agent
     pro_query = text(
-        "SELECT player_id, avg(average_combat_score), avg(deaths),avg(assists),avg(kills_deaths) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where agent_id=:agent and tier_id = 21 group by player_id  order by count(agent_id) desc limit 100"
+        "SELECT player_id, avg(average_combat_score), avg(deaths),avg(assists) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where agent_id=:agent and tier_id = 21 group by player_id  order by count(agent_id) desc limit 100"
     ).bindparams(agent=agent)
-    pros = list(connection.execute(pro_query))
+    with request.app.state.db.connect() as connection:
+        pros = list(connection.execute(pro_query))
     pro_tree = sp.spatial.KDTree([x[1:] for x in pros])
     query = text(
-        "SELECT avg(average_combat_score), avg(deaths),avg(assists),avg(kills_deaths) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where player_id=:player_id group by player_id"
+        "SELECT avg(average_combat_score), avg(deaths),avg(assists) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where player_id=:player_id group by player_id"
     ).bindparams(player_id=player_id)
-    user_stats = list(connection.execute(query))
+    with request.app.state.db.connect() as connection:
+        user_stats = list(connection.execute(query))
     _, best_match = pro_tree.query(user_stats, k=1)
     return {"best_match": f"{pros[best_match[0]][0]}"}
 
