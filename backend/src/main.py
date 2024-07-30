@@ -253,11 +253,12 @@ async def player_monthly_stats(
         for row in player_stats_data
     ]
 
-@app.get("/update_user_data")
+@app.post("/update_user_data")
 async def update_user_data(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
 ):
+    
     player_id = current_user.player_id
 
     if not player_id:
@@ -269,54 +270,56 @@ async def update_user_data(
     playerign = ign_tag[0]
     playertag = ign_tag[1]
 
-    query = text(
-        "select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1 where player_id = :playerid"
-    ).bindparams(playerid=player_id)
+    settings = get_settings()
+    valo_api.set_api_key(settings.henrik_api_key.get_secret_value())
     matches = await valo_api.get_match_history_by_name_v3_async(  # type: ignore
         "na", playerign, playertag, game_mode="competitive"
     )
+    
+    with request.app.state.db.connect() as connection:
+        for match in matches:
+            metadata = match.metadata
+            #print(match.metadata)
+            query = text("select game_id from Game where riot_id =:id").bindparams(
+                id=metadata.matchid
+            )  
+            if connection.execute(query).first() == None and metadata.mode == "Competitive":
+                query = text("select map_id from Maps where map_name = :map").bindparams(
+                    map=metadata.map
+                )
+                #print(metadata.map)
+                mapp = connection.execute(query).first()[0]
 
-    request.app.state.db.execute(text("START TRANSACTION"))
-    request.app.state.db.execute(text("LOCK TABLES Game WRITE"))
+                stmst = text(
+                    "insert into Game(map_id, date_info, riot_id) values(:map, :game_start, :matchid)"
+                ).bindparams(map=mapp, game_start=metadata.game_start, matchid=metadata.matchid)
+                connection.execute(stmst)
+                connection.commit()
 
+                winteam = "Blue"
+                if match.teams.red.has_won:
+                    winteam = "Red"
 
-    for match in matches:
-        metadata = match.metadata
-        winteam = "Blue"
-        if match.teams.red.has_won:
-            winteam = "Red"
-        # print(metadata.map, metadata.game_start, metadata.matchid)
-        query = text("select map_id from Maps where map_name = :map").bindparams(
-            map=metadata.map
-        )
-        mapp = request.app.state.db.execute(query).first()[0]
-        stmst = text(
-            "insert into Game(map_id, date_info, riot_id) values(:map, :game_start, :matchid)"
-        ).bindparams(map=mapp, game_start=metadata.game_start, matchid=metadata.matchid)
-        request.app.state.db.execute(stmst)
-        request.app.state.db.commit()
-        query = text("select game_id from Game where riot_id =:id").bindparams(
-            id=metadata.matchid
-        )  # maybe can get game id in same execution as insert?
-        result = request.app.state.db.execute(query)
-        game_id = result.first()[0]
-        # print(f"gameid = {game_id}")
+                query = text("select game_id from Game where riot_id =:id").bindparams(
+                id=metadata.matchid
+                )
+                game_id = connection.execute(query).first()[0]
+               
+                query = text("select game_id from Game where riot_id =:id").bindparams(
+                    id=metadata.matchid
+                )  
+                result = connection.execute(query)
+                game_id = result.first()[0]
+                
+                query = text(
+                "select game_id, player_id from Player_Stats where game_id = :game_id"
+                ).bindparams(game_id=game_id)
+                beforeupdate = list(connection.execute(query))
 
-        query = text(
-            "select * from playerstats1  where game_id =:id and player_id = :playerid"
-        ).bindparams(id=game_id, playerid=player_id)
-        with request.app.state.db.connect() as connection:
-            result = connection.execute(query)
-
-        if not result.first():
-            # print(matchdict.players)
-            matchrounds = metadata.rounds_played
-            player_data = match.players.all_players
-
-            request.app.state.db.execute(text("LOCK TABLES playerstats1 WRITE"))
-
-            for player in player_data:
-                if player.tag == playertag and player.name == playerign:
+                matchrounds = metadata.rounds_played
+                player_data = match.players.all_players
+                for player in player_data:
+                    player_id = f"{player.name}#{player.tag}"
                     didwin = False
                     if player.team == winteam:
                         didwin = True
@@ -328,30 +331,30 @@ async def update_user_data(
                     query = text(
                         "select agent_id from Agents where agent_name = :agent"
                     ).bindparams(agent=player.character)
-
-                    
-                    with request.app.state.db.connect() as connection:
-                        agent = connection.execute(query).first()[0]
-                        stmst = text(
-                            "insert into playerstats1 (game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)"
-                        ).bindparams(
-                            gid=game_id,
-                            pid=player_id,
-                            w=didwin,
-                            aid=agent,
-                            acs=player.stats.score / matchrounds,
-                            k=player.stats.kills,
-                            d=player.stats.deaths,
-                            a=player.stats.assists,
-                            adr=player.damage_made / matchrounds,
-                            hr=player.stats.headshots / shots,
-                            tid=player.currenttier,
-                        )
-                        connection.execute(stmst)
-                        connection.commit()
-    request.app.state.db.execute(text("UNLOCK TABLES"))
-    request.app.state.db.execute(text("COMMIT"))
-    return {"success": True}
+                    agent = connection.execute(query).first()[0]
+                    stmst = text(
+                        "insert into Player_Stats (game_id, player_id,agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)"
+                    ).bindparams(
+                        gid=game_id,
+                        pid=player_id,
+                        aid=agent,
+                        acs=player.stats.score / matchrounds,
+                        k=player.stats.kills,
+                        d=player.stats.deaths,
+                        a=player.stats.assists,
+                        adr=player.damage_made / matchrounds,
+                        hr=player.stats.headshots / shots,
+                        tid=player.currenttier,
+                    )
+                    connection.execute(stmst)
+                    connection.commit()
+                query = text("select game_id, player_id from Player_Stats where game_id = :game_id").bindparams(game_id=game_id)
+                after = list(connection.execute(query))
+                print("-------------before-------------")
+                print(beforeupdate)
+                print("-------------after-------------")
+                print(after)
+    return {"ok"}
 
 @app.get("/most_played_agent")
 def most_played_agent(
@@ -636,7 +639,21 @@ async def delete_user(
 #     END //
 #     DELIMITER ;
 #     """
+# DELIMITER //
 
+# CREATE TRIGGER playeradd BEFORE INSERT ON Player
+# FOR EACH ROW
+# BEGIN
+#     DECLARE id_count INT;
+#     SELECT COUNT(*) INTO id_count
+#     FROM Player
+#     WHERE player_id = NEW.player_id;
+#     IF id_count != 0 THEN
+#         UPDATE Player SET current_tier_id = new.current_tier_id  where player_id = NEW.player_id;
+#     END IF;
+# END //
+
+# DELIMITER;
 
 @app.get("/matches")
 async def matches(
@@ -668,24 +685,6 @@ async def matches(
     ]
 
     return matches
-
-
-# DELIMITER //
-
-# CREATE TRIGGER userlogin BEFORE INSERT ON User
-# FOR EACH ROW
-# BEGIN
-#     DECLARE user_count INT;
-#     SELECT COUNT(*) INTO user_count
-#     FROM User
-#     WHERE username = NEW.username;
-#     IF user_count = 0 THEN
-#         INSERT INTO User (username, player_id, password_hash)
-#         VALUES (NEW.username, NEW.player_id, NEW.password_hash);
-#     END IF;
-# END //
-
-# DELIMITER ;
 
 
 @app.get("/model_matches")
