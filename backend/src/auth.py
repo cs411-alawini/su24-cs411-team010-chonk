@@ -48,7 +48,7 @@ def register_user(db, username: str, password: str):
     with db.connect() as connection:
         player_data = connection.execute(statement).fetchone()
 
-        connection.execute(text("BEGIN TRANSACTION"))
+        connection.execute(text("START TRANSACTION"))
 
         if not player_data:
 

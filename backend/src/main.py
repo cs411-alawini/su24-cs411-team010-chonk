@@ -217,7 +217,7 @@ async def update_user_data(
         "na", playerign, playertag, game_mode="competitive"
     )
 
-    request.app.state.db.execute(text("BEGIN TRANSACTION"))
+    request.app.state.db.execute(text("START TRANSACTION"))
     request.app.state.db.execute(text("LOCK TABLES Game WRITE"))
 
 
