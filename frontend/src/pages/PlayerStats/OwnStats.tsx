@@ -286,6 +286,9 @@ const PlayerStats: React.FC = () => {
             Player Stats
           </Heading>
           <Spacer />
+          <ChakraLink as={ReactRouterLink} to="/lookup">
+            <Button>Lookup</Button>
+          </ChakraLink>
           <ChakraLink as={ReactRouterLink} to="/">
             <Button>Go Back</Button>
           </ChakraLink>
