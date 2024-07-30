@@ -5,6 +5,7 @@ from typing import Annotated, Union
 import config
 import jwt
 import scipy as sp
+import valo_api
 from auth import (
     authenticate_user,
     create_access_token,
@@ -193,6 +194,97 @@ async def player_stats(
     }
 
 
+@app.get("/update_user_data")
+async def update_user_data(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    if "#" not in player_id:
+        return "Bad ign"
+    ign_tag = player_id.split("#")
+    playerign = ign_tag[0]
+    playertag = ign_tag[1]
+
+    settings = get_settings()
+    query = text(
+        "select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1 where player_id = :playerid"
+    ).bindparams(playerid=player_id)
+    beforeupdate = list(request.app.state.db.execute(query))
+
+    valo_api.set_api_key(settings.henrik_api_key.get_secret_value())
+    matches = await valo_api.get_match_history_by_name_v3_async(  # type: ignore
+        "na", playerign, playertag, game_mode="competitive"
+    )
+
+    for match in matches:
+        metadata = match.metadata
+        winteam = "Blue"
+        if match.teams.red.has_won:
+            winteam = "Red"
+        print(metadata.map, metadata.game_start, metadata.matchid)
+        query = text("select map_id from Maps where map_name = :map").bindparams(
+            map=metadata.map
+        )
+        mapp = request.app.state.db.execute(query).first()[0]
+        stmst = text(
+            "insert into Game(map_id, date_info, riot_id) values(:map, :game_start, :matchid)"
+        ).bindparams(map=mapp, game_start=metadata.game_start, matchid=metadata.matchid)
+        request.app.state.db.execute(stmst)
+        request.app.state.db.commit()
+        query = text("select game_id from Game where riot_id =:id").bindparams(
+            id=metadata.matchid
+        )  # maybe can get game id in same execution as insert?
+        result = request.app.state.db.execute(query)
+        game_id = result.first()[0]
+        print(f"gameid = {game_id}")
+
+        query = text(
+            "select * from playerstats1  where game_id =:id and player_id = :playerid"
+        ).bindparams(id=game_id, playerid=player_id)
+        if not request.app.state.db.execute(query).first():
+            # print(matchdict.players)
+            matchrounds = metadata.rounds_played
+            player_data = match.players.all_players
+            for player in player_data:
+                if player.tag == playertag and player.name == playerign:
+                    didwin = False
+                    if player.team == winteam:
+                        didwin = True
+                    shots = (
+                        player.stats.bodyshots
+                        + player.stats.headshots
+                        + player.stats.legshots
+                    )
+                    query = text(
+                        "select agent_id from Agents where agent_name = :agent"
+                    ).bindparams(agent=player.character)
+                    agent = request.app.state.db.execute(query).first()[0]
+                    stmst = text(
+                        "insert into  playerstats1 (game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id) values(:gid, :pid, :w, :aid, :acs, :k, :d,:a,:adr,:hr,:tid)"
+                    ).bindparams(
+                        gid=game_id,
+                        pid=player_id,
+                        w=didwin,
+                        aid=agent,
+                        acs=player.stats.score / matchrounds,
+                        k=player.stats.kills,
+                        d=player.stats.deaths,
+                        a=player.stats.assists,
+                        adr=player.damage_made / matchrounds,
+                        hr=player.stats.headshots / shots,
+                        tid=player.currenttier,
+                    )
+                    request.app.state.db.execute(stmst)
+                    request.app.state.db.commit()
+    query = text(
+        "select game_id, player_id,won, agent_id, average_combat_score,kills,deaths,assists,average_damage_per_round,headshot_ratio, tier_id from playerstats1  where player_id = :playerid"
+    ).bindparams(playerid=player_id)
+    after = list(request.app.state.db.execute(query))
+    print(beforeupdate, after)
+    return {"hi"}
+
+
 @app.get("/most_played_agent")
 def most_played_agent(
     request: Request,
@@ -211,7 +303,6 @@ def most_played_agent(
     agent = most_played_user.agent
 
     return {"most_played_agent": f"{agent}"}
-
 
 @app.get("/most_played_map")
 def most_played_map(
@@ -244,14 +335,16 @@ def get_pro_lookalike(
     most_played_user = result.fetchone()
     agent = most_played_user.agent
     pro_query = text(
-        "SELECT player_id, avg(average_combat_score), avg(deaths),avg(assists),avg(kills_deaths) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where agent_id=:agent and tier_id = 21 group by player_id  order by count(agent_id) desc limit 100"
+        "SELECT player_id, avg(average_combat_score), avg(deaths),avg(assists) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where agent_id=:agent and tier_id = 21 group by player_id  order by count(agent_id) desc limit 100"
     ).bindparams(agent=agent)
-    pros = list(connection.execute(pro_query))
+    with request.app.state.db.connect() as connection:
+        pros = list(connection.execute(pro_query))
     pro_tree = sp.spatial.KDTree([x[1:] for x in pros])
     query = text(
-        "SELECT avg(average_combat_score), avg(deaths),avg(assists),avg(kills_deaths) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where player_id=:player_id group by player_id"
+        "SELECT avg(average_combat_score), avg(deaths),avg(assists) ,avg(kill_assist_trade_survive_ratio),avg(average_damage_per_round),avg(headshot_ratio),avg(first_kills),avg(first_deaths) FROM Player_Stats where player_id=:player_id group by player_id"
     ).bindparams(player_id=player_id)
-    user_stats = list(connection.execute(query))
+    with request.app.state.db.connect() as connection:
+        user_stats = list(connection.execute(query))
     _, best_match = pro_tree.query(user_stats, k=1)
     return {"best_match": f"{pros[best_match[0]][0]}"}
 
@@ -328,11 +421,14 @@ def agent_recommendations(
 def top_agent_map(
     request: Request,
 ):
-    query = text(
-        "SELECT m.map_name, a.agent_name, MAX(astats.acs) AS MaxACS"
-        " FROM Agent_Stats astats JOIN Agents a ON astats.agent_id = a.agent_id JOIN Map_Stats mstats ON astats.map_id = mstats.map_id AND astats.tier_id = mstats.tier_id JOIN Maps m ON mstats.map_id = m.map_id"
-        " GROUP BY m.map_name, a.agent_name ORDER BY m.map_name, MaxACS DESC LIMIT 15"
-    )
+    query = text("""
+        SELECT m.map_name, a.agent_name, astats.acs AS MaxACS
+        FROM Agent_Stats astats JOIN Agents a ON astats.agent_id = a.agent_id JOIN Map_Stats mstats ON astats.map_id = mstats.map_id AND astats.tier_id = mstats.tier_id JOIN Maps m ON mstats.map_id = m.map_id
+         WHERE (astats.map_id, astats.acs) IN (
+            SELECT map_id, MAX(acs) FROM Agent_Stats GROUP BY map_id
+        )
+         ORDER BY m.map_name, MaxACS DESC
+    """)
     with request.app.state.db.connect() as connection:
         result = connection.execute(query)
     top_agent_map = result.fetchall()
@@ -445,3 +541,20 @@ def analyze_performance(
 #     END //
 #     DELIMITER ;
 #     """
+
+# DELIMITER //
+
+# CREATE TRIGGER userlogin BEFORE INSERT ON User
+# FOR EACH ROW
+# BEGIN
+#     DECLARE user_count INT;
+#     SELECT COUNT(*) INTO user_count
+#     FROM User
+#     WHERE username = NEW.username;
+#     IF user_count = 0 THEN
+#         INSERT INTO User (username, player_id, password_hash)
+#         VALUES (NEW.username, NEW.player_id, NEW.password_hash);
+#     END IF;
+# END //
+
+# DELIMITER ;
