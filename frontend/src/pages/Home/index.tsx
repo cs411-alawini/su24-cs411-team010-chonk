@@ -1,4 +1,4 @@
-import { BaseSyntheticEvent, useState } from "react";
+import { BaseSyntheticEvent, useState, useRef } from "react";
 import {
   InputGroup,
   Input,
@@ -29,6 +29,12 @@ import {
   createIcon,
   Divider,
   Skeleton,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
 } from "@chakra-ui/react";
 import { Link as ReactRouterLink } from "react-router-dom";
 import { Link as ChakraLink } from "@chakra-ui/react";
@@ -57,6 +63,7 @@ const Home = (): React.ReactElement => {
   const [riotId, setRiotId] = useState("");
   const [password, setPassword] = useState("");
   const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem("token"));
+  const [magic, setMagic] = useState([]);
   const [show, setShow] = useState(false);
   const [riotIdError, setRiotIdError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
@@ -119,6 +126,7 @@ const Home = (): React.ReactElement => {
   if (profileError || agentError || matchDataError) {
     localStorage.removeItem("token");
     setLoggedIn(false);
+    setMagic([]);
   }
 
   const toast = useToast();
@@ -195,10 +203,70 @@ const Home = (): React.ReactElement => {
     }
   };
 
+  const handleMagic = async (): Promise<void> => {
+    if (!loggedIn) {
+      return;
+    }
+
+    const response = await fetch(config.apiUrl + "/model_matches", {
+      headers: { Authorization: "Bearer " + localStorage.token },
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setMagic(data);
+    } else {
+      toast({
+        title: "Magic failed",
+        status: "error",
+        position: "top",
+        duration: 5000,
+      });
+    }
+  };
+
   const handleLogout = (): void => {
     localStorage.removeItem("token");
     setLoggedIn(false);
+    setMagic([]);
   };
+
+  const [isOpen, setIsOpen] = useState(false);
+  const onClose = () => setIsOpen(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  
+  const handleDeleteConfirm = () => {
+    setIsOpen(false);
+    handleDelete();
+  };
+
+  const handleDelete = async (): Promise<void> => {
+    console.log("Attempting to delete account");
+    
+    try {
+      const response = await fetch(`${config.apiUrl}/delete_user`, {
+        method: "POST",
+        headers: {"Authorization": `Bearer ${localStorage.token}`}
+      });
+      
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+  
+      const data = await response.json();
+      console.log("Delete account response:", data);
+  
+      if (data.status === "success") {
+        alert("Account deleted successfully.");
+      } else {
+        alert("Failed to delete account. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      alert("An error occurred while trying to delete the account. Please try again.");
+    }
+  }
 
   return (
     <Flex minH={"100vh"} align={"center"} justify={"center"}>
@@ -210,6 +278,7 @@ const Home = (): React.ReactElement => {
           {loggedIn ? (
             <HStack>
               <Button onClick={handleUpdateInfo}>Refresh Data</Button>
+              <Button onClick={() => setIsOpen(true)}>Delete Account</Button>
               <Button onClick={handleLogout}>Log Out</Button>
             </HStack>
           ) : null}
@@ -320,8 +389,16 @@ const Home = (): React.ReactElement => {
         {loggedIn ? (
           <Skeleton isLoaded={!isFetchingMatchData && !isFetchingProfile}>
             <VStack align="unset" minWidth={"70vw"}>
-              <Heading size="md">Match History</Heading>
+              <HStack>
+                <Heading size="md">Match History</Heading>
+                <Spacer></Spacer>
+                <Button onClick={handleMagic}>Magic ✨</Button>
+              </HStack>
               <Spacer />
+              <Text>
+                Click the magic button to see your calculated win rate
+                percentage!
+              </Text>
 
               <TableContainer>
                 <Table variant="simple">
@@ -337,6 +414,7 @@ const Home = (): React.ReactElement => {
                       <Th>Headshot Ratio</Th>
                       <Th>First Kills</Th>
                       <Th>First Deaths</Th>
+                      {magic.length > 0 ? <Th>Magic</Th> : null}
                     </Tr>
                   </Thead>
                   <Tbody>
@@ -352,6 +430,9 @@ const Home = (): React.ReactElement => {
                         <Td>{match.headshot_ratio}%</Td>
                         <Td>{match.first_kills}</Td>
                         <Td>{match.first_deaths}</Td>
+                        {magic.length > 0 ? (
+                          <Td>{Number(magic[idx] * 100).toFixed(2)}%</Td>
+                        ) : null}
                       </Tr>
                     ))}
                   </Tbody>
@@ -398,6 +479,34 @@ const Home = (): React.ReactElement => {
             </TableContainer>
           </VStack>
         )}
+
+        <AlertDialog
+        isOpen={isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onClose}
+        >
+        <AlertDialogOverlay>
+            <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Delete Account
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+                Are you sure you want to delete your account? This action cannot be undone.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+                <Button ref={cancelRef} onClick={onClose}>
+                Cancel
+                </Button>
+                <Button colorScheme="red" onClick={handleDeleteConfirm} ml={3}>
+                Delete
+                </Button>
+            </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialogOverlay>
+        </AlertDialog>
+
       </VStack>
     </Flex>
   );

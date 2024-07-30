@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Button, VStack, HStack, Heading, Select, Text, Grid, GridItem, Image, Spacer } from '@chakra-ui/react';
+import { Box, Button, VStack, HStack, Heading, Select, Text, Grid, GridItem, Image, Spacer, Spinner } from '@chakra-ui/react';
 import ValoEmblem from "../../assets/ValoEmblem.png";
 import config from "../../config.ts";
 import { Link as ReactRouterLink } from "react-router-dom";
@@ -80,6 +80,7 @@ const Lookup = () => {
     const [lookupType, setLookupType] = useState<LookupType>('agentSynergies');
     const [formData, setFormData] = useState<{ [key: string]: string }>({});
     const [output, setOutput] = useState<string[] | OutputItem[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
 
     const handleLookupTypeChange = (type: LookupType) => {
         setLookupType(type);
@@ -119,6 +120,7 @@ const Lookup = () => {
     // };
 
     const handleLookup = async (type: LookupType) => {
+        setLoading(true); // Start loading
         try {
             let response;
             let data;
@@ -206,6 +208,8 @@ const Lookup = () => {
             }
         } catch (error) {
             console.error('Error fetching data:', error);
+        } finally {
+            setLoading(false); // End loading
         }
     };
     
@@ -227,7 +231,7 @@ const Lookup = () => {
                     <Button>Go Back</Button>
                 </ChakraLink>
             </HStack>
-            <HStack spacing={4} mb={6}>
+            <HStack spacing={4} mb={6} justifyContent="left">
                 <Button variant="valoRed" onClick={() => handleLookupTypeChange('agentSynergies')}>Agent Synergies</Button>
                 <Button variant="valoRed" onClick={() => handleLookupTypeChange('mostPlayedAgent')}>Player Most Played Agent</Button>
                 <Button variant="valoRed" onClick={() => handleLookupTypeChange('agentRecommendations')}>Agent Recommendations</Button>
@@ -277,11 +281,15 @@ const Lookup = () => {
                 </GridItem>
 
                 <GridItem>
-                    <VStack spacing={4} align="start">
-                        {Array.isArray(output) && typeof output[0] === 'string' && (
-                            (output as string[]).map((item, index) => (
-                            <Text key={index} style={{ color: "white" }}>{item}</Text>
-                            ))
+                    <VStack spacing={4} align="left">
+                        {loading ? (
+                            <Spinner size="xl" color="white" />
+                        ) : (
+                            Array.isArray(output) && typeof output[0] === 'string' && (
+                                (output as string[]).map((item, index) => (
+                                    <Text key={index} style={{ color: "white" }}>{item}</Text>
+                                ))
+                            )
                         )}
                     </VStack>
                 </GridItem>

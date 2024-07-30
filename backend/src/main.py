@@ -1,9 +1,11 @@
+import pickle
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Annotated, Union
 
 import config
 import jwt
+import pandas as pd
 import scipy as sp
 import valo_api
 from auth import (
@@ -22,9 +24,20 @@ from sqlalchemy import text
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
+def replace_percentage(df, column):
+    df[column] = df[column].str.replace("%", "").astype(float)
+    return df
+
+
+import __main__  # noqa: E402
+
+__main__.replace_percentage = replace_percentage  # type: ignore
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.db = engine
+    app.state.model = pickle.load(open("model.pkl", "rb"))
     yield
     engine.dispose()
 
@@ -193,6 +206,52 @@ async def player_stats(
         "avgFirstBloodsPerGame": player_stats_data.avgFirstBloodsPerGame,
     }
 
+@app.get("/player-monthly-stats")
+async def player_monthly_stats(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        """
+            SELECT 
+                DATE_FORMAT(STR_TO_DATE(g.date_info, '%Y-%m-%d %H:%i:%s'), '%Y-%m-01') AS month,
+                AVG(ps.kills) as avgKillsPerGame,
+                AVG(ps.deaths) as avgDeathsPerGame,
+                AVG(ps.assists) as avgAssistsPerGame,
+                AVG(ps.average_combat_score) as avgCombatScorePerGame,
+                AVG(ps.headshot_ratio) as avgHeadShotRatio,
+                AVG(ps.first_kills) as avgFirstBloodsPerGame
+            FROM 
+                Player_Stats ps
+            JOIN 
+                Game g ON ps.game_id = g.game_id
+            WHERE 
+                ps.player_id = :player_id
+            GROUP BY 
+                month
+            ORDER BY 
+                month
+        """
+    ).bindparams(player_id=player_id)
+
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    
+    player_stats_data = result.fetchall()
+    
+    return [
+        {
+            "month": row.month,
+            "avgKillsPerGame": round(row.avgKillsPerGame, 2) if row.avgKillsPerGame is not None else None,
+            "avgDeathsPerGame": round(row.avgDeathsPerGame, 2) if row.avgDeathsPerGame is not None else None,
+            "avgAssistsPerGame": round(row.avgAssistsPerGame, 2) if row.avgAssistsPerGame is not None else None,
+            "avgCombatScorePerGame": round(row.avgCombatScorePerGame, 2) if row.avgCombatScorePerGame is not None else None,
+            "avgHeadShotRatio": round(row.avgHeadShotRatio, 2) if row.avgHeadShotRatio is not None else None,
+            "avgFirstBloodsPerGame": round(row.avgFirstBloodsPerGame, 2) if row.avgFirstBloodsPerGame is not None else None,
+        }
+        for row in player_stats_data
+    ]
 
 @app.get("/update_user_data")
 async def update_user_data(
@@ -315,6 +374,7 @@ def most_played_agent(
     agent = most_played_user.agent
 
     return {"most_played_agent": f"{agent}"}
+
 
 @app.get("/most_played_map")
 def most_played_map(
@@ -475,6 +535,32 @@ def analyze_performance(
     return {"kowalski_analysis": f"{analysis}"}
 
 
+@app.post("/delete_user")
+async def delete_user(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    username = current_user.username
+
+    try:
+        with request.app.state.db.connect() as connection:
+            print("test")
+            result = connection.execute(text("DELETE FROM User WHERE username = :uname").bindparams(uname=username))
+            connection.commit()
+            print(result.rowcount)
+            if result.rowcount == 0:
+                raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"status": "success", "message": "User deleted successfully"}
+
+
+
+
+
+
 # stored_procedure = """
 #     DELIMITER //
 #     CREATE PROCEDURE AnalyzePlayerPerformance(IN player_id VARCHAR(50), IN map_name VARCHAR(50))
@@ -602,3 +688,42 @@ async def matches(
 # END //
 
 # DELIMITER ;
+
+
+@app.get("/model_matches")
+async def model_matches(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    query = text(
+        "SELECT * from Player_Stats natural join Game natural join Maps natural join Agents where player_id=:player_id  order by game_id limit 5"
+    ).bindparams(player_id=player_id)
+    with request.app.state.db.connect() as connection:
+        result = connection.execute(query)
+    match_data = result.fetchall()
+
+    matches = [
+        {
+            "side": match.team_side,
+            "kill_assist_trade_survive_ratio": str(
+                match.kill_assist_trade_survive_ratio
+            ),
+            "tier": match.tier_id,
+            "kills_deaths": match.kills - match.deaths,
+            "agent": match.agent_id,
+            "average_damage_per_round": match.average_damage_per_round,
+            "kills": match.kills,
+            "deaths": match.deaths,
+            "assists": match.assists,
+            "average_combat_score": match.average_combat_score,
+            "headshot_ratio": str(match.headshot_ratio),
+            "first_kills": match.first_kills,
+            "first_deaths": match.first_deaths,
+        }
+        for match in match_data
+    ]
+
+    X = pd.DataFrame(matches)
+    predictions = request.app.state.model.predict_proba(X)
+    return [prediction[1] for prediction in predictions]
