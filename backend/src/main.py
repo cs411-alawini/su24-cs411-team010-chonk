@@ -328,11 +328,14 @@ def agent_recommendations(
 def top_agent_map(
     request: Request,
 ):
-    query = text(
-        "SELECT m.map_name, a.agent_name, MAX(astats.acs) AS MaxACS"
-        " FROM Agent_Stats astats JOIN Agents a ON astats.agent_id = a.agent_id JOIN Map_Stats mstats ON astats.map_id = mstats.map_id AND astats.tier_id = mstats.tier_id JOIN Maps m ON mstats.map_id = m.map_id"
-        " GROUP BY m.map_name, a.agent_name ORDER BY m.map_name, MaxACS DESC LIMIT 15"
-    )
+    query = text("""
+        SELECT m.map_name, a.agent_name, astats.acs AS MaxACS
+        FROM Agent_Stats astats JOIN Agents a ON astats.agent_id = a.agent_id JOIN Map_Stats mstats ON astats.map_id = mstats.map_id AND astats.tier_id = mstats.tier_id JOIN Maps m ON mstats.map_id = m.map_id
+         WHERE (astats.map_id, astats.acs) IN (
+            SELECT map_id, MAX(acs) FROM Agent_Stats GROUP BY map_id
+        )
+         ORDER BY m.map_name, MaxACS DESC
+    """)
     with request.app.state.db.connect() as connection:
         result = connection.execute(query)
     top_agent_map = result.fetchall()
