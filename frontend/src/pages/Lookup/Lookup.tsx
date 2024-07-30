@@ -148,7 +148,7 @@ const Lookup = () => {
                     ) : (
                         <VStack spacing={4} align="start">
                         {Array.isArray(output) && typeof output[0] === 'string' && (
-                            output.map((item, index) => (
+                            (output as string[]).map((item, index) => (
                             <Text key={index} style={{color: "white"}}>{item}</Text>
                             ))
                         )}
