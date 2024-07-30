@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Button, VStack, HStack, Heading, Select, Input, Text, Grid, GridItem, Image } from '@chakra-ui/react';
+import { Box, Button, VStack, HStack, Heading, Select, Text, Grid, GridItem, Image } from '@chakra-ui/react';
 import ValoEmblem from "../../assets/ValoEmblem.png";
 import config from "../../config.ts";
 
@@ -25,32 +25,32 @@ const mapData = [
     { map_id: 'Abyss', map_name: 'Abyss' },
 ];
 
-const agentData = [
-    { agent_id: 0, agent_name: 'Reyna' },
-    { agent_id: 1, agent_name: 'Sage' },
-    { agent_id: 2, agent_name: 'Sova' },
-    { agent_id: 3, agent_name: 'Jett' },
-    { agent_id: 4, agent_name: 'Raze' },
-    { agent_id: 5, agent_name: 'Killjoy' },
-    { agent_id: 6, agent_name: 'Yoru' },
-    { agent_id: 7, agent_name: 'Omen' },
-    { agent_id: 8, agent_name: 'Viper' },
-    { agent_id: 9, agent_name: 'Breach' },
-    { agent_id: 10, agent_name: 'Astra' },
-    { agent_id: 11, agent_name: 'Skye' },
-    { agent_id: 12, agent_name: 'Brimstone' },
-    { agent_id: 13, agent_name: 'Cypher' },
-    { agent_id: 14, agent_name: 'Phoenix' },
-    { agent_id: 15, agent_name: 'Kayo' },
-    { agent_id: 16, agent_name: 'Clove' },
-    { agent_id: 17, agent_name: 'Chamber' },
-    { agent_id: 18, agent_name: 'Neon' },
-    { agent_id: 19, agent_name: 'Harbor' },
-    { agent_id: 20, agent_name: 'Gekko' },
-    { agent_id: 21, agent_name: 'Fade' },
-    { agent_id: 22, agent_name: 'Iso' },
-    { agent_id: 23, agent_name: 'Deadlock' },
-];
+// const agentData = [
+//     { agent_id: 0, agent_name: 'Reyna' },
+//     { agent_id: 1, agent_name: 'Sage' },
+//     { agent_id: 2, agent_name: 'Sova' },
+//     { agent_id: 3, agent_name: 'Jett' },
+//     { agent_id: 4, agent_name: 'Raze' },
+//     { agent_id: 5, agent_name: 'Killjoy' },
+//     { agent_id: 6, agent_name: 'Yoru' },
+//     { agent_id: 7, agent_name: 'Omen' },
+//     { agent_id: 8, agent_name: 'Viper' },
+//     { agent_id: 9, agent_name: 'Breach' },
+//     { agent_id: 10, agent_name: 'Astra' },
+//     { agent_id: 11, agent_name: 'Skye' },
+//     { agent_id: 12, agent_name: 'Brimstone' },
+//     { agent_id: 13, agent_name: 'Cypher' },
+//     { agent_id: 14, agent_name: 'Phoenix' },
+//     { agent_id: 15, agent_name: 'Kayo' },
+//     { agent_id: 16, agent_name: 'Clove' },
+//     { agent_id: 17, agent_name: 'Chamber' },
+//     { agent_id: 18, agent_name: 'Neon' },
+//     { agent_id: 19, agent_name: 'Harbor' },
+//     { agent_id: 20, agent_name: 'Gekko' },
+//     { agent_id: 21, agent_name: 'Fade' },
+//     { agent_id: 22, agent_name: 'Iso' },
+//     { agent_id: 23, agent_name: 'Deadlock' },
+// ];
 
 const rankData = [
     { tier_id: 3, tier_name: 'Iron 1' },
