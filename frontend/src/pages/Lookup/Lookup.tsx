@@ -3,7 +3,7 @@ import { Box, Button, VStack, HStack, Heading, Select, Input, Text, Grid, GridIt
 import ValoEmblem from "../../assets/ValoEmblem.png";
 import config from "../../config.ts";
 
-type LookupType = 'agentSynergies' | 'mostPlayedAgent' | 'agentRecommendations';
+type LookupType = 'agentSynergies' | 'mostPlayedAgent' | 'agentRecommendations' | 'topMapAgents';
 
 interface OutputItem {
     title: string;
@@ -83,13 +83,32 @@ const Lookup = () => {
         setLookupType(type);
         setFormData({});
         setOutput([]);
+        switch (lookupType) {
+            case 'agentSynergies':
+                handleLookup;
+                break;
+
+            case 'mostPlayedAgent':
+                handleLookup;
+                break;
+
+            case 'agentRecommendations':
+                break;
+            
+            case  'topMapAgents':
+                handleLookup;
+                break;
+
+            default:
+                break;
+        }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData({
-          ...formData,
-          [name]: value,
+            ...formData,
+            [name]: value,
         });
     };
 
@@ -127,7 +146,7 @@ const Lookup = () => {
                     console.log('Agent Synergies Response:', data); // Log the response data
                     
                     // Parse the agent_synergies response
-                    const parsedSynergies = JSON.parse(data.agent_synergies.replace(/'/g, '"')).map((item) => item[0]);
+                    const parsedSynergies = JSON.parse(data.agent_synergies.replace(/'/g, '"')).map((item: any[]) => item[0]);
                     console.log('Parsed Agent Synergies:', parsedSynergies); // Log the parsed data
     
                     setOutput(parsedSynergies);
@@ -191,45 +210,13 @@ const Lookup = () => {
                 <Button variant="valoRed" onClick={() => handleLookupTypeChange('agentSynergies')}>Agent Synergies</Button>
                 <Button variant="valoRed" onClick={() => handleLookupTypeChange('mostPlayedAgent')}>Player Most Played Agent</Button>
                 <Button variant="valoRed" onClick={() => handleLookupTypeChange('agentRecommendations')}>Agent Recommendations</Button>
+                <Button variant="valoRed" onClick={() => handleLookupTypeChange('topMapAgents')}>Map Top Agents</Button>
             </HStack>
 
             {/* Swap out as per needed */}
             <Grid templateColumns="1fr 2fr" gap={6}>
                 <GridItem>
                     <VStack spacing={4} align="start" mb={6}>
-
-                        {lookupType === 'agentSynergies' && (
-                        <>
-                            <Select 
-                                placeholder="Select Agent" 
-                                name="agent" 
-                                onChange={handleInputChange}
-                                maxW = "200px"
-                                style={{backgroundColor: "white"}}
-                            >
-                            {agentData.map((agent) => (
-                                <option key={agent.agent_id} value={agent.agent_id} style={{ backgroundColor: '#2D3748', color: 'white' }}>
-                                {agent.agent_name}
-                                </option>
-                            ))}
-                            {/* Add more options as needed */}
-                            </Select>
-                            <Button variant="valoRed" onClick={handleLookup}>Enter</Button>
-                        </>
-                        )}
-
-                        {lookupType === 'mostPlayedAgent' && (
-                        <>
-                            <Input 
-                                placeholder="Enter Player Name" 
-                                name="playerName" 
-                                onChange={handleInputChange} 
-                                maxW = "200px"
-                                style={{backgroundColor: "white"}}
-                            />
-                            <Button variant="valoRed" onClick={handleLookup}>Enter</Button>
-                        </>
-                        )}
 
                         {lookupType === 'agentRecommendations' && (
                         <>
