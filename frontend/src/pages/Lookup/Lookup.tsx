@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Box, Button, VStack, HStack, Heading, Select, Text, Grid, GridItem, Image } from '@chakra-ui/react';
+import { Box, Button, VStack, HStack, Heading, Select, Text, Grid, GridItem, Image, Spacer } from '@chakra-ui/react';
 import ValoEmblem from "../../assets/ValoEmblem.png";
 import config from "../../config.ts";
+import { Link as ReactRouterLink } from "react-router-dom";
+import { Link as ChakraLink } from "@chakra-ui/react";
 
 type LookupType = 'agentSynergies' | 'mostPlayedAgent' | 'agentRecommendations' | 'topMapAgents';
 
@@ -220,6 +222,10 @@ const Lookup = () => {
                 <Heading as="h1" size="xl" mb={6} style={{color: "white"}}>
                     Information Lookup
                 </Heading>
+                <Spacer />
+                <ChakraLink as={ReactRouterLink} to="/">
+                    <Button>Go Back</Button>
+                </ChakraLink>
             </HStack>
             <HStack spacing={4} mb={6}>
                 <Button variant="valoRed" onClick={() => handleLookupTypeChange('agentSynergies')}>Agent Synergies</Button>
