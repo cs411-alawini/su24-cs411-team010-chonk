@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Button, VStack, HStack, Heading, Select, Input, Text, Grid, GridItem, Image } from '@chakra-ui/react';
 import ValoEmblem from "../../assets/ValoEmblem.png";
+import config from "../../config.ts";
 
 type LookupType = 'agentSynergies' | 'mostPlayedAgent' | 'agentRecommendations';
 
@@ -28,25 +29,76 @@ const Lookup = () => {
         });
     };
 
-    const handleLookup = () => {
+    // const handleLookup = () => {
         // Mock data for output
-        const mockOutput = {
-        agentSynergies: ['Synergy 1', 'Synergy 2'],
-        mostPlayedAgent: ['Agent 1', 'Agent 2'],
-        agentRecommendations: {
-            mapRank: ['Recommendation 1', 'Recommendation 2'],
-            overall: ['Overall 1', 'Overall 2'],
-        },
-        };
-        if (lookupType === 'agentRecommendations') {
-            setOutput([
-              { title: 'For Current Rank', data: mockOutput.agentRecommendations.mapRank },
-              { title: 'Overall', data: mockOutput.agentRecommendations.overall }
-            ]);
-        } else {
-            setOutput(mockOutput[lookupType] as string[]);
+        // const mockOutput = {
+        // agentSynergies: ['Synergy 1', 'Synergy 2'],
+        // mostPlayedAgent: ['Agent 1', 'Agent 2'],
+        // agentRecommendations: {
+        //     mapRank: ['Recommendation 1', 'Recommendation 2'],
+        //     overall: ['Overall 1', 'Overall 2'],
+        // },
+        // };
+        // if (lookupType === 'agentRecommendations') {
+        //     setOutput([
+        //       { title: 'For Current Rank', data: mockOutput.agentRecommendations.mapRank },
+        //       { title: 'Overall', data: mockOutput.agentRecommendations.overall }
+        //     ]);
+        // } else {
+        //     setOutput(mockOutput[lookupType] as string[]);
+        // }
+    // };
+
+    const handleLookup = async () => {
+        try {
+            let response;
+            let data;
+        
+            switch (lookupType) {
+                case 'agentSynergies':
+                    response = await fetch(`${config.apiUrl}/agent_synergies`, {
+                        headers: { Authorization: `Bearer ${localStorage.token}` },
+                    });
+                    data = await response.json();
+                    setOutput(data.agent_synergies);
+                    break;
+        
+                case 'mostPlayedAgent':
+                    response = await fetch(`${config.apiUrl}/player_most_played_agent`, {
+                        headers: { Authorization: `Bearer ${localStorage.token}` },
+                    });
+                    data = await response.json();
+                    setOutput(data.player_most_played_agent);
+                    break;
+        
+                case 'agentRecommendations':
+                    const { map, rank } = formData;
+                    // Fetch recommendations for current map and rank
+                    response = await fetch(`${config.apiUrl}/agent_recommendations?map_name=${map}&tier_id=${rank}`, {
+                        headers: { Authorization: `Bearer ${localStorage.token}` },
+                    });
+                    const mapRankData = await response.json();
+
+                    // Fetch overall recommendations
+                    const overallResponse = await fetch(`${config.apiUrl}/top_agent_map`, {
+                        headers: { Authorization: `Bearer ${localStorage.token}` },
+                    });
+                    const overallData = await overallResponse.json();
+                    
+                    setOutput([
+                        { title: 'For Current Rank', data: mapRankData.agent_recommendations },
+                        { title: 'Overall', data: overallData  }
+                    ]);
+                    break;
+        
+                default:
+                    break;
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
         }
     };
+    
 
     return (
         <Box p={4} style={{backgroundColor: "#1a202c", minHeight: "100vh", width: "100vw"}}>
