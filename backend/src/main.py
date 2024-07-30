@@ -276,6 +276,10 @@ async def update_user_data(
         "na", playerign, playertag, game_mode="competitive"
     )
 
+    request.app.state.db.execute(text("START TRANSACTION"))
+    request.app.state.db.execute(text("LOCK TABLES Game WRITE"))
+
+
     for match in matches:
         metadata = match.metadata
         winteam = "Blue"
@@ -308,6 +312,9 @@ async def update_user_data(
             # print(matchdict.players)
             matchrounds = metadata.rounds_played
             player_data = match.players.all_players
+
+            request.app.state.db.execute(text("LOCK TABLES playerstats1 WRITE"))
+
             for player in player_data:
                 if player.tag == playertag and player.name == playerign:
                     didwin = False
@@ -321,6 +328,8 @@ async def update_user_data(
                     query = text(
                         "select agent_id from Agents where agent_name = :agent"
                     ).bindparams(agent=player.character)
+
+                    
                     with request.app.state.db.connect() as connection:
                         agent = connection.execute(query).first()[0]
                         stmst = text(
@@ -340,9 +349,9 @@ async def update_user_data(
                         )
                         connection.execute(stmst)
                         connection.commit()
-
+    request.app.state.db.execute(text("UNLOCK TABLES"))
+    request.app.state.db.execute(text("COMMIT"))
     return {"success": True}
-
 
 @app.get("/most_played_agent")
 def most_played_agent(
@@ -521,6 +530,19 @@ def analyze_performance(
     analysis = result.fetchall()
 
     return {"kowalski_analysis": f"{analysis}"}
+
+
+@app.post("/delete_user")
+async def delete_user(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    player_id = current_user.player_id
+    request.app.state.db.connect.execute(text("DELETE FROM User WHERE username = :uname").bindparams(uname = username))
+
+
+
+
 
 
 # stored_procedure = """
